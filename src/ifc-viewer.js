@@ -16,14 +16,18 @@ function nameFor(type,name){
  return "Arquitectura";
 }
 // Categories describe IFC objects; they do not depend on system assignment.
-function categoryFor(type,name,predefined=""){
- const t=(type+" "+name+" "+predefined).toUpperCase();
- if(/FLEX.*DUCT|DUCT.*FLEX|FLEXDUCT|CONDUCTO FLEX|CONDUCTO FLEXIBLE/.test(t))return "flexduct";
- if(/IFCDUCT|DUCT|CONDUCTO|AIRHANDLINGDUCT/.test(t))return "ducts";
- if(/IFCPIPEFITTING|IFCPIPEACCESSORY|IFCVALVE|IFCFLOWCONTROLLER|VALVULA|VÁLVULA|CODO|TEE|REDUCCION|REDUCCIÓN/.test(t))return "pipefit";
- if(/IFCPIPE|PIPE|TUBERIA|TUBERÍA|CAÑERIA|CAÑERÍA|PIPING/.test(t))return "pipes";
- if(/IFCAIRTERMINAL|DIFUSOR|REJILLA|GRILLE|DIFFUSER/.test(t))return "terminals";
- if(/IFCEQUIPMENT|IFCFAN|IFCPUMP|IFCCHILLER|IFCBOILER|IFCHEATEXCHANGER|IFCENERGYCONVERSIONDEVICE|IFCDISTRIBUTIONCONTROL|IFCFLOWTERMINAL|EQUIPMENT|CHILLER|BOMBA|VENTILADOR|UTA|AHU/.test(t))return "equipment";
+function categoryFor(type,name="",predefined=""){
+ const entity=String(type||"").toUpperCase();
+ const t=(String(name||"")+" "+String(predefined||"")).toUpperCase();
+ // Diffusers and grilles are terminals, not mechanical equipment.
+ if(/IFCAIRTERMINAL|IFCAIRTERMINALBOX/.test(entity)||/DIFUSOR|DIFFUSER|REJILLA|GRILLE|ANEMOSTATO|TOBERA/.test(t))return "terminals";
+ if(/IFCFLEXIBLESEGMENT|IFCFLEXIBLEDUCT/.test(entity)||/FLEX.*DUCT|DUCT.*FLEX|FLEXDUCT|CONDUCTO FLEX/.test(t))return "flexduct";
+ if(/IFCDUCT/.test(entity)||/DUCT|CONDUCTO/.test(t))return "ducts";
+ if(/IFCPIPEFITTING|IFCPIPEACCESSORY|IFCVALVE|IFCFLOWCONTROLLER/.test(entity)||/VALVULA|VÁLVULA|CODO |TEE |REDUCCION|REDUCCIÓN/.test(t))return "pipefit";
+ if(/IFCPIPE/.test(entity)||/CAÑERIA|CAÑERÍA|TUBERIA|TUBERÍA|PIPING/.test(t))return "pipes";
+ if(/IFCPUMP|IFCFAN|IFCCHILLER|IFCBOILER|IFCCOIL|IFCHEATEXCHANGER|IFCUNITARYEQUIPMENT|IFCENERGYCONVERSIONDEVICE|IFCCOMPRESSOR|IFCCONDENSER|IFCEVAPORATOR|IFCENGINE|IFCAIRTOAIRHEATRECOVERY|IFCEQUIPMENT/.test(entity))return "equipment";
+ // Generic IFCFLOWTERMINAL is NOT sufficient; require recognizable equipment name.
+ if(/\bCHILLER\b|\bMINICHILLER\b|\bUTA[ _-]?\d*\b|\bAHU[ _-]?\d*\b|\bFAN ?COIL\b|\bBOMBA\b|\bPUMP\b|\bVENTILADOR\b|\bFAN\b|\bUNIDAD (DE )?TRATAMIENTO\b|\bROOFTOP\b|\bEQUIPO MECANICO\b/.test(t))return "equipment";
  return "architecture";
 }
 export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=()=>{}}={}){
@@ -170,7 +174,7 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   levels:[...levels].filter(x=>x!=="Todos").sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})),
   systems:[...groups].sort(),
   count:records.length,
-  equipment:records.filter(entry=>["equipment","terminals"].includes(entry.category)).map(({id,name,instanceName,typeName,type,group,category,level,guid,tag})=>({id,name,instanceName,typeName,type,group,category,level,guid,tag})),
+  equipment:records.filter(entry=>entry.category==="equipment").map(({id,name,instanceName,typeName,type,group,category,level,guid,tag})=>({id,name,instanceName,typeName,type,group,category,level,guid,tag})),
   getNearby(entry){return nearElements(entry)},
   focusNearby(entry){
     if(!entry)return [];
