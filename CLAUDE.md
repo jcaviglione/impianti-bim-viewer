@@ -21,7 +21,10 @@ Visor BIM web **de IMPIANTI S.R.L.**, independiente de GLI1. Audiencia: personal
 2. Procesar IFC una vez en pipeline de publicación, dividir por obra/nivel, crear formatos optimizados y manifiesto de propiedades.
 3. API de obras, almacenamiento privado, autenticación y permisos de operación/mantenimiento.
 4. Ficha de equipo con identificador estable (`Revit UniqueId` / `IFC GlobalId`) y QR.
-5. Exportador C# Revit 2025/2026/2027 para conectores MEP y trazado de redes.
+5. Mantener un modo ligero de proximidad por geometría: los equipos de aire, chillers o bombas pueden estar sin conectar físicamente a caños o conductos en Revit. Al seleccionar un equipo, ofrecer «Resaltar cercanos» sin afirmar conexión verificada. El técnico interpreta ida, retorno, mando e inyección por colores y filtro de sistemas; el grafo de conectores no es un requisito para el prototipo.
+6. Añadir un mapeo configurable de sistemas por obra, priorizando la propiedad IFC exportada de «Nombre de sistema» cuando esté disponible, o parámetros alternativos como «Comentarios», «Abreviatura de sistema» o parámetros compartidos de Revit. No inferir siempre por proximidad.
+7. Para identificación de equipos: empezar por clase/categoría IFC (equipos mecánicos, terminales, bombas, válvulas), niveles y códigos/etiquetas; permitir correcciones manuales.
+8. Exportador opcional C# Revit 2025/2026/2027 solo si aporta valor futuro, no bloquear la experiencia de mantenimiento.
 6. Integración modular al Centro de Operaciones existente sin romper sus rutas, seguridad ni datos.
 
 ## Reglas de trabajo
