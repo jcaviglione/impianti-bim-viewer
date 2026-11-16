@@ -297,9 +297,11 @@ function createDemoSVG(){
   const ns="http://www.w3.org/2000/svg";const svg=document.createElementNS(ns,"svg");
   svg.setAttribute("viewBox","0 0 640 410");
   const valid=(system,level)=>state.systems.includes(system)&&(state.floor==="Todos"||state.floor===level);
+  const visibleCategory=id=>state.categories.includes(id);
+  const demoCategory=system=>system==="Climatización"?"ducts":"pipes";
   const axo=state.view!=="plan";
   if(axo){
-    svg.innerHTML='<g stroke="#b5bfc0" fill="none" stroke-width="1.35" opacity=".62"><path d="M118 140L322 50L537 142L326 237Z M118 140V285L326 382V237 M326 382L537 286V142 M118 189L326 281L537 190 M118 236L326 327L537 239 M159 123V303 M213 102V327 M268 78V355 M376 77V356 M436 102V333 M493 123V306"/><path d="M149 127L357 222M204 103L415 198M254 81L469 175" opacity=".4"/></g>';
+    svg.innerHTML=visibleCategory("architecture")?'<g stroke="#b5bfc0" fill="none" stroke-width="1.35" opacity=".62"><path d="M118 140L322 50L537 142L326 237Z M118 140V285L326 382V237 M326 382L537 286V142 M118 189L326 281L537 190 M118 236L326 327L537 239 M159 123V303 M213 102V327 M268 78V355 M376 77V356 M436 102V333 M493 123V306"/><path d="M149 127L357 222M204 103L415 198M254 81L469 175" opacity=".4"/></g>':"";
     const paths=[
       {system:"Agua fría",level:"SS1",d:"M165 225L320 288L455 222L506 245",width:8},
       {system:"Retorno",level:"SS1",d:"M166 250L320 312L451 249L510 270",width:7},
@@ -307,9 +309,15 @@ function createDemoSVG(){
       {system:"Climatización",level:"SS1",d:"M202 198L327 254L463 190",width:13},
       {system:"Incendio",level:"SS2",d:"M173 290L318 351L467 280",width:6}
     ];
-    for(const p of paths){if(!valid(p.system,p.level))continue;const el=document.createElementNS(ns,"path");el.setAttribute("d",p.d);el.setAttribute("fill","none");el.setAttribute("stroke",state.colors[p.system]);el.setAttribute("stroke-width",p.width);el.setAttribute("stroke-linecap","round");svg.append(el)}
+    for(const p of paths){if(!valid(p.system,p.level)||!visibleCategory(demoCategory(p.system)))continue;const el=document.createElementNS(ns,"path");el.setAttribute("d",p.d);el.setAttribute("fill","none");el.setAttribute("stroke",state.colors[p.system]);el.setAttribute("stroke-width",p.width);el.setAttribute("stroke-linecap","round");svg.append(el)}
+    if(visibleCategory("flexduct")&&valid("Climatización","SS1")){
+      const flex=document.createElementNS(ns,"path");
+      flex.setAttribute("d","M463 190Q485 184 496 207");
+      flex.setAttribute("fill","none");flex.setAttribute("stroke","#efab61");
+      flex.setAttribute("stroke-width","7");flex.setAttribute("stroke-linecap","round");flex.setAttribute("stroke-dasharray","7 4");svg.append(flex);
+    }
     for(const e of demo.equipment.filter(e=>state.floor==="Todos"||e.floor===state.floor)){
-      if(!state.systems.includes(e.system))continue;
+      if(!state.systems.includes(e.system)||!visibleCategory("equipment"))continue;
       const pos=({"CH-01":[173,225],"UTA-01":[343,254],"BC-02":[202,308],"VE-01":[461,179],"HI-01":[478,190]})[e.id];
       const circle=document.createElementNS(ns,"circle");circle.setAttribute("cx",pos[0]);circle.setAttribute("cy",pos[1]);
       circle.setAttribute("r",state.selected?.id===e.id?"13":"9");circle.setAttribute("fill","#fff");circle.setAttribute("stroke",state.colors[e.system]);
@@ -317,7 +325,7 @@ function createDemoSVG(){
       circle.addEventListener("click",()=>{state.selected=e;renderInspector();updateDemoScene()});svg.append(circle);
     }
   }else{
-    svg.innerHTML='<g fill="#f7f9f8" stroke="#b4bec0" stroke-width="2"><path d="M120 85H520V325H120Z"/><path d="M230 85V325M400 85V325M120 205H520"/></g>';
+    svg.innerHTML=visibleCategory("architecture")?'<g fill="#f7f9f8" stroke="#b4bec0" stroke-width="2"><path d="M120 85H520V325H120Z"/><path d="M230 85V325M400 85V325M120 205H520"/></g>':"";
     const paths=[
       {system:"Agua fría",level:"SS1",d:"M165 250H300V180H485"},
       {system:"Retorno",level:"SS1",d:"M165 271H322V202H485"},
@@ -325,9 +333,23 @@ function createDemoSVG(){
       {system:"Climatización",level:"SS1",d:"M245 105V304H420"},
       {system:"Incendio",level:"SS2",d:"M165 300H490"}
     ];
-    for(const p of paths)if(valid(p.system,p.level)){
+    for(const p of paths)if(valid(p.system,p.level)&&visibleCategory(demoCategory(p.system))){
       const el=document.createElementNS(ns,"path");el.setAttribute("d",p.d);el.setAttribute("fill","none");el.setAttribute("stroke",state.colors[p.system]);
       el.setAttribute("stroke-width","10");el.setAttribute("stroke-linecap","round");svg.append(el);
+    }
+    if(visibleCategory("flexduct")&&valid("Climatización","SS1")){
+      const flex=document.createElementNS(ns,"path");flex.setAttribute("d","M420 304Q441 309 460 287");
+      flex.setAttribute("fill","none");flex.setAttribute("stroke","#efab61");
+      flex.setAttribute("stroke-width","7");flex.setAttribute("stroke-dasharray","7 4");svg.append(flex);
+    }
+    if(visibleCategory("equipment")){
+      for(const e of demo.equipment.filter(e=>(state.floor==="Todos"||e.floor===state.floor)&&state.systems.includes(e.system))){
+        const xy=({"CH-01":[165,250],"UTA-01":[245,105],"BC-02":[165,300],"VE-01":[420,220],"HI-01":[485,151]})[e.id];
+        const dot=document.createElementNS(ns,"circle");dot.setAttribute("cx",xy[0]);dot.setAttribute("cy",xy[1]);
+        dot.setAttribute("r",state.selected?.id===e.id?"13":"9");dot.setAttribute("fill","#fff");
+        dot.setAttribute("stroke",state.colors[e.system]);dot.setAttribute("stroke-width","4");
+        dot.style.cursor="pointer";dot.addEventListener("click",()=>{state.selected=e;renderInspector();updateDemoScene()});svg.append(dot);
+      }
     }
   }
   const label=document.createElementNS(ns,"text");label.setAttribute("x","320");label.setAttribute("y","26");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","13");label.setAttribute("font-weight","700");label.setAttribute("fill","#758583");
