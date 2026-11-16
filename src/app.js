@@ -161,8 +161,8 @@ async function mountModel(project){
   try{
     const controller=await loadIFC(host,project.file,{
       status:message=>{if(seq===openSeq&&loading)loading.textContent=message},
-      onSelect:entry=>{if(seq!==openSeq)return;state.selected=entry;renderInspector()},
-      onModel:metadata=>{if(seq!==openSeq)return;state.project._levels=metadata.levels;state.project._systems=metadata.systems}
+      onSelect:entry=>{if(seq!==openSeq)return;state.model?.clearNearby();state.selected=entry;renderInspector()},
+      onModel:metadata=>{if(seq!==openSeq)return;state.project._levels=metadata.levels;state.project._systems=metadata.systems;state.project._equipment=metadata.equipment||[]}
     });
     if(seq!==openSeq){controller.dispose();return}
     state.model=controller;state.systems=[...controller.systems];state.floor="Todos";loading.remove();
@@ -216,7 +216,19 @@ function renderFilterPanel(){
   const results=h("div",{id:"equipmentResults",style:"margin-top:10px"});
   const drawResults=()=>{
     results.replaceChildren();const q=search.value.trim().toLowerCase();
-    if(state.project?.id!=="demo"){results.append(h("p",{class:"project-meta",text:"En IFC: tocá un elemento del modelo para consultar su ficha. El catálogo automático de equipos se incorporará luego."}));return}
+    if(state.project?.id!=="demo"){
+      const items=(state.project?._equipment||[]).filter(e=>
+        (state.floor==="Todos"||e.level===state.floor)&&
+        (e.name+" "+e.type+" "+e.tag).toLowerCase().includes(q)
+      ).slice(0,45);
+      for(const e of items)results.append(h("button",{
+        class:"nav-item",style:"width:100%;font-size:12px;justify-content:start",
+        text:"◈ "+(e.name||e.type),
+        onClick:()=>{state.model?.clearNearby();state.selected=e;renderInspector()}
+      }));
+      if(!items.length)results.append(h("p",{class:"project-meta",text:"No se encontraron equipos en este nivel. También podés tocar cualquier elemento del modelo."}));
+      return;
+    }
     const items=demo.equipment.filter(e=>(state.floor==="Todos"||e.floor===state.floor)&&(e.id+" "+e.name).toLowerCase().includes(q));
     for(const e of items)results.append(h("button",{class:"nav-item",style:"width:100%;font-size:12px;justify-content:start",text:"◈ "+e.name,onClick:()=>{state.selected=e;renderInspector();updateDemoScene()}}));
     if(!items.length)results.append(h("p",{class:"project-meta",text:"No hay equipos en este nivel."}));
@@ -311,7 +323,30 @@ function renderInspector(){
     ]));
     box.append(h("p",{class:"footnote",text:"Esta ficha es ilustrativa. El trazado de ejemplo no corresponde a una instalación real."}));
   }else{
-    box.append(h("p",{class:"footnote",text:"Propiedades básicas extraídas del IFC. Datos técnicos y filtros por parámetros se completarán en la siguiente etapa."}));
+    const nearby=state.model?.getNearby(item)||[];
+    box.append(h("div",{class:"section-label",text:"Instalaciones próximas"}));
+    if(nearby.length){
+      box.append(h("p",{class:"project-meta",text:"Elementos cercanos por posición en el modelo. No significa que estén conectados físicamente."}));
+      const actions=h("div",{class:"floor-list"},[
+        h("button",{class:"pill",text:"Resaltar cercanos",onClick:()=>{
+          if(item.level&&item.level!=="Sin nivel"){state.floor=item.level;state.model?.setLevel(item.level)}
+          state.systems=[...new Set([...state.systems,item.group,...nearby.map(e=>e.group)])];
+          state.model?.setSystems(state.systems);state.model?.focusNearby(item);
+          renderFilterPanel();
+          toast("Mostrando instalaciones próximas, sin confirmar conexiones.");
+        }}),
+        h("button",{class:"pill",text:"Mostrar todo",onClick:()=>{state.model?.clearNearby();state.floor="Todos";state.model?.setLevel("Todos");renderFilterPanel()}}),
+        h("button",{class:"pill",text:"Ver en planta",onClick:()=>{state.view="plan";state.model?.setView("plan");refreshToolbar()}})
+      ]);
+      box.append(actions);
+      for(const e of nearby.slice(0,7))box.append(h("div",{class:"info-row"},[
+        h("small",{text:e.group+" · "+e.level}),
+        h("strong",{text:e.name})
+      ]));
+    }else{
+      box.append(h("p",{class:"project-meta",text:"No se identificaron instalaciones próximas dentro del entorno de búsqueda. Podés explorar los sistemas manualmente."}));
+    }
+    box.append(h("p",{class:"footnote",text:"Vista IFC de prueba. Para clasificar sistemas con Comentarios u otros parámetros, será necesario añadir un mapeo configurable según el modelo."}));
   }
   panel.append(box);
 }
