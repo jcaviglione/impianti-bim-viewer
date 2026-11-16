@@ -15,6 +15,17 @@ function nameFor(type,name){
  if(/PIPE|FITTING|VALVE|PUMP|EQUIPMENT|TANK|FLOW|DISTRIBUTION|TERMINAL|CABLE/.test(s))return "Otros MEP";
  return "Arquitectura";
 }
+// Categories describe IFC objects; they do not depend on system assignment.
+function categoryFor(type,name,predefined=""){
+ const t=(type+" "+name+" "+predefined).toUpperCase();
+ if(/FLEX.*DUCT|DUCT.*FLEX|FLEXDUCT|CONDUCTO FLEX|CONDUCTO FLEXIBLE/.test(t))return "flexduct";
+ if(/IFCDUCT|DUCT|CONDUCTO|AIRHANDLINGDUCT/.test(t))return "ducts";
+ if(/IFCPIPEFITTING|IFCPIPEACCESSORY|IFCVALVE|IFCFLOWCONTROLLER|VALVULA|VÁLVULA|CODO|TEE|REDUCCION|REDUCCIÓN/.test(t))return "pipefit";
+ if(/IFCPIPE|PIPE|TUBERIA|TUBERÍA|CAÑERIA|CAÑERÍA|PIPING/.test(t))return "pipes";
+ if(/IFCAIRTERMINAL|DIFUSOR|REJILLA|GRILLE|DIFFUSER/.test(t))return "terminals";
+ if(/IFCEQUIPMENT|IFCFAN|IFCPUMP|IFCCHILLER|IFCBOILER|IFCHEATEXCHANGER|IFCENERGYCONVERSIONDEVICE|IFCDISTRIBUTIONCONTROL|IFCFLOWTERMINAL|EQUIPMENT|CHILLER|BOMBA|VENTILADOR|UTA|AHU/.test(t))return "equipment";
+ return "architecture";
+}
 export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=()=>{}}={}){
  let api=null,modelID=null,renderer=null,frame=0,observer=null,removed=false;
  const cleanups=[];
@@ -51,9 +62,9 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
  const meshesById=new Map();
  api.StreamAllMeshes(modelID,flat=>{
   const id=flat.expressID,info=line(id),type=api.GetNameFromTypeCode(info.type||0)||"Elemento IFC",name=value(info.Name)||type;
-  const group=nameFor(type,name),level=levelOf.get(id)||"Sin nivel";
+  const group=nameFor(type,name),level=levelOf.get(id)||"Sin nivel",category=categoryFor(type,name,value(info.PredefinedType));
   groups.add(group);levels.add(level);
-  const entry={id,name,type,group,level,guid:value(info.GlobalId),tag:value(info.Tag),objects:[]};
+  const entry={id,name,type,group,category,level,guid:value(info.GlobalId),tag:value(info.Tag),objects:[]};
   for(let i=0;i<flat.geometries.size();i++){
    const placed=flat.geometries.get(i),geometry=api.GetGeometry(modelID,placed.geometryExpressID);
    const vertex=api.GetVertexArray(geometry.GetVertexData(),geometry.GetVertexDataSize());
@@ -141,7 +152,7 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   levels:[...levels].filter(x=>x!=="Todos").sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})),
   systems:[...groups].sort(),
   count:records.length,
-  equipment:records.filter(entry=>/EQUIPMENT|TERMINAL|PUMP|FAN|CHILLER|BOILER|COIL|VALVE|HEATEXCHANGER|ENERGYCONVERSION|FLOWCONTROLLER|DISTRIBUTIONCONTROL|MEDICALDEVICE/i.test(entry.type)).map(({id,name,type,group,level,guid,tag})=>({id,name,type,group,level,guid,tag})),
+  equipment:records.filter(entry=>["equipment","terminals"].includes(entry.category)).map(({id,name,type,group,category,level,guid,tag})=>({id,name,type,group,category,level,guid,tag})),
   getNearby(entry){return nearElements(entry)},
   focusNearby(entry){
     if(!entry)return [];
@@ -155,22 +166,24 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   reset(){zoom=1;setCamera("axo")},
   setLevel(level){for(const o of objects){const e=o.userData.entry;o.visible=(level==="Todos"||e.level===level)&&(!visibleGroups||visibleGroups.has(e.group))}refreshCamera()},
   setSystems(ids){visibleGroups=new Set(ids);applyFilters()},
+  setCategories(ids){visibleCategories=new Set(ids);applyFilters()},
   setColor(group,hex){colorOverrides[group]=hex;for(const o of objects)if(o.userData.entry.group===group)o.material.color.set(hex);refreshCamera()},
   dispose(){if(removed)return;removed=true;observer?.disconnect();cleanups.forEach(f=>f());for(const obj of objects){obj.geometry.dispose();obj.material.dispose()}renderer.dispose();host.replaceChildren();try{api.CloseModel(modelID)}catch{}}
  };
- let visibleGroups=null,currentLevel="Todos";
+ let visibleGroups=null,visibleCategories=null,currentLevel="Todos";
  function applyFilters(){
    for(const o of objects){
      const e=o.userData.entry;
      const inFloor=currentLevel==="Todos"||currentLevel===e.level;
      const allowedGroup=!visibleGroups||visibleGroups.has(e.group);
-     const nearAllowed=!nearbyIds||nearbyIds.has(e.id)||e.group==="Arquitectura";
-     o.visible=inFloor&&allowedGroup&&nearAllowed;
+     const nearAllowed=!nearbyIds||nearbyIds.has(e.id)||e.category==="architecture";
+     const categoryAllowed=!visibleCategories||visibleCategories.has(e.category);
+     o.visible=inFloor&&allowedGroup&&nearAllowed&&categoryAllowed;
    }
    refreshCamera();
  }
  controller.setLevel=level=>{currentLevel=level;applyFilters()};
- onModel({levels:controller.levels,systems:controller.systems,count:controller.count});
+ onModel({levels:controller.levels,systems:controller.systems,count:controller.count,equipment:controller.equipment});
  return controller;
  }catch(e){
   try{if(api&&modelID!=null)api.CloseModel(modelID)}catch{}
