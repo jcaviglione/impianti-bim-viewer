@@ -83,8 +83,9 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   const id=flat.expressID,info=line(id),type=api.GetNameFromTypeCode(info.type||0)||"Elemento IFC";
   const instanceName=value(info.Name),typeName=typeNames.get(id)||value(info.ObjectType);
   const name=typeName||instanceName||value(info.Tag)||type;
-  const group=nameFor(type,instanceName||typeName||name);
-  const level=levelOf.get(id)||"Sin nivel",category=categoryFor(type,instanceName||typeName||name,value(info.PredefinedType));
+  const combinedName=[instanceName,typeName,name].filter(Boolean).join(" ");
+  const group=nameFor(type,combinedName);
+  const level=levelOf.get(id)||"Sin nivel",category=categoryFor(type,combinedName,value(info.PredefinedType));
   groups.add(group);levels.add(level);
   const entry={id,name,instanceName,typeName,type,group,category,level,guid:value(info.GlobalId),tag:value(info.Tag),objects:[]};
   for(let i=0;i<flat.geometries.size();i++){
