@@ -34,18 +34,26 @@ Alternativa: publicar este repositorio como sitio estático (GitHub Pages/Vercel
 4. Seleccionar SS1, SS2, PB u otro nivel exportado. Activar/desactivar instalaciones, seleccionar un elemento y orbitar con el botón.
 5. Verificar en el IFC real la clasificación de sistemas: depende de cómo Revit exportó tipos, relaciones y nombres. Si faltan datos, no se inventan.
 
+## Controles de visibilidad
+
+El prototipo dispone de casillas independientes por **categoría de elemento**: arquitectura, equipos, cañerías, accesorios de cañerías, conductos rígidos, conductos flexibles y terminales. Incluye accesos rápidos: **Solo equipos**, **Cañerías + equipos**, **Ver todo**.
+
+El filtro por **sistema** es independiente y permite ocultar instalaciones por color. El prototipo deduce grupos básicos desde nombres IFC; mapear parámetros como `Comentarios`, `Nombre de sistema`, `Abreviatura de sistema` o parámetros compartidos es trabajo de integración posterior.
+
+La lista de equipos busca primero su **nombre de tipo** desde `IfcRelDefinesByType`; si no llega exportado, se utiliza el nombre de instancia o el identificador. En la versión actual también pueden seleccionarse directamente elementos en la vista.
+
 ## Limitaciones técnicas
 
 - IFC como formato de entrada, no archivos .RVT directos.
 - Lectura y geometría en el propio navegador; todavía no hay conversión persistida optimizada ni streaming.
-- Los sistemas se infieren a partir de nombres de elementos y grupos IFC; algunas exportaciones de Revit pueden perder relaciones MEP. El recorrido conectado de cañerías requiere un futuro exportador específico Revit API.
+- Los sistemas se infieren a partir de nombres de elementos y grupos IFC; algunas exportaciones de Revit pueden perder relaciones MEP. No es necesario demostrar conectividad MEP para usar los colores y localizar tuberías próximas: el técnico puede interpretar el recorrido visualmente. Un exportador adicional de conectores sería opcional.
 - No se garantiza rendimiento con un hospital completo hasta probar con modelos reales.
 - No hay cuentas, roles ni almacenamiento compartido. No cargar información sensible en un despliegue público sin implementar permisos.
 - Biblioteca Web-IFC con licencia MPL-2.0; Three.js bajo MIT. Revisar las licencias de sus versiones antes del despliegue empresarial.
 
 ## Identidad
 
-La tipografía del logo y los colores están centralizados en `styles.css`. La referencia `https://calias-uy.vercel.app/` no pudo inspeccionarse con precisión en el entorno de autoría; los valores actuales son **provisionales** y deben contrastarse con una captura o los CSS de Calias. La tipografía del resto de la interfaz es independiente del logo.
+La tipografía del logo y los colores están centralizados en `styles.css`. La interfaz toma como referencia las capturas suministradas de Calias: blanco, negro, grises, retícula sutil y naranja. El logo de tres «i» es una aproximación tipográfica; para reproducirlo exactamente se necesitará el recurso oficial. El resto de la interfaz usa una tipografía legible independiente. La tipografía del resto de la interfaz es independiente del logo.
 
 ## Integración con el centro de operaciones
 
