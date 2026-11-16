@@ -32,7 +32,7 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
  try{
  status("Cargando motor 3D…");
  const [THREE,IFC]=await Promise.all([import(THREE_URL),import(IFC_URL)]);
- api=new IFC.IfcAPI(); api.SetWasmPath(WASM_URL); await api.Init();
+ api=new IFC.IfcAPI(); api.SetWasmPath(WASM_URL,true); await api.Init();
  status("Leyendo IFC local…");
  modelID=api.OpenModel(new Uint8Array(await file.arrayBuffer()));
  const scene=new THREE.Scene(); scene.background=new THREE.Color("#f1f2f2");
