@@ -1,0 +1,135 @@
+// Independent IFC prototype: no server upload and no database.
+// External dependencies load only when the user opens an IFC.
+const THREE_URL="https://esm.sh/three@0.170.0";
+const IFC_URL="https://esm.sh/web-ifc@0.0.66";
+const WASM_URL="https://cdn.jsdelivr.net/npm/web-ifc@0.0.66/";
+const palette={"Arquitectura":"#b5baba","Agua fría":"#2983df","Agua caliente":"#ef705b","Retorno":"#e4a539","Climatización":"#38a7aa","Incendio":"#d54b51","Sanitaria":"#8ca86a","Otros MEP":"#9b89ce"};
+function nameFor(type,name){
+ const s=(type+" "+name).toUpperCase();
+ if(/FIRE|SPRINK|INCEND|HIDRANT|ROCIAD/.test(s))return "Incendio";
+ if(/DRAIN|SANIT|WASTE|SEWER|DESAG/.test(s))return "Sanitaria";
+ if(/HOT|HEAT|CALIENT|ACS/.test(s))return "Agua caliente";
+ if(/RETURN|RETORN/.test(s))return "Retorno";
+ if(/CHILL|COLD|FRIA|FRÍA|COOL/.test(s))return "Agua fría";
+ if(/DUCT|AIR|FAN|VENT|CLIMA/.test(s))return "Climatización";
+ if(/PIPE|FITTING|VALVE|PUMP|EQUIPMENT|TANK|FLOW|DISTRIBUTION|TERMINAL|CABLE/.test(s))return "Otros MEP";
+ return "Arquitectura";
+}
+export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=()=>{}}={}){
+ let api=null,modelID=null,renderer=null,frame=0,observer=null,removed=false;
+ const cleanups=[];
+ try{
+ status("Cargando motor 3D…");
+ const [THREE,IFC]=await Promise.all([import(THREE_URL),import(IFC_URL)]);
+ api=new IFC.IfcAPI(); api.SetWasmPath(WASM_URL); await api.Init();
+ status("Leyendo IFC local…");
+ modelID=api.OpenModel(new Uint8Array(await file.arrayBuffer()));
+ const scene=new THREE.Scene(); scene.background=new THREE.Color("#f1f2f2");
+ const camera=new THREE.OrthographicCamera(-10,10,10,-10,.01,100000);
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));host.replaceChildren(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xffffff,0xc4c9c8,2.5));
+ const sun=new THREE.DirectionalLight(0xffffff,1.5);sun.position.set(30,80,50);scene.add(sun);
+ const root=new THREE.Group();scene.add(root);
+ const objects=[],records=[],levels=new Set(["Todos"]),groups=new Set();
+ const colorOverrides={...palette};
+ function value(v){if(v==null)return "";return typeof v==="object" && "value" in v?String(v.value):String(v)}
+ function line(id){try{return api.GetLine(modelID,id,false)||{}}catch{return {}}}
+ const levelOf=new Map();
+ try{
+  const relationIDs=api.GetLineIDsWithType(modelID,IFC.IFCRELCONTAINEDINSPATIALSTRUCTURE);
+  for(let i=0;i<relationIDs.size();i++){
+   const rel=line(relationIDs.get(i)),parent=line(rel.RelatingStructure?.value);
+   const type=api.GetNameFromTypeCode(parent.type||0)||"";
+   if(!type.includes("BUILDINGSTOREY"))continue;
+   const label=value(parent.Name)||"Sin nombre";
+   levels.add(label);
+   for(const e of rel.RelatedElements||[])if(e?.value!=null)levelOf.set(e.value,label);
+  }
+ }catch(e){console.warn("Sin niveles IFC exportados:",e)}
+ status("Construyendo geometría…");
+ const meshesById=new Map();
+ api.StreamAllMeshes(modelID,flat=>{
+  const id=flat.expressID,info=line(id),type=api.GetNameFromTypeCode(info.type||0)||"Elemento IFC",name=value(info.Name)||type;
+  const group=nameFor(type,name),level=levelOf.get(id)||"Sin nivel";
+  groups.add(group);levels.add(level);
+  const entry={id,name,type,group,level,guid:value(info.GlobalId),tag:value(info.Tag),objects:[]};
+  for(let i=0;i<flat.geometries.size();i++){
+   const placed=flat.geometries.get(i),geometry=api.GetGeometry(modelID,placed.geometryExpressID);
+   const vertex=api.GetVertexArray(geometry.GetVertexData(),geometry.GetVertexDataSize());
+   const index=api.GetIndexArray(geometry.GetIndexData(),geometry.GetIndexDataSize());
+   const pos=new Float32Array(vertex.length/2),norm=new Float32Array(vertex.length/2);
+   for(let j=0,k=0;j<vertex.length;j+=6,k+=3){
+    pos[k]=vertex[j];pos[k+1]=vertex[j+1];pos[k+2]=vertex[j+2];
+    norm[k]=vertex[j+3];norm[k+1]=vertex[j+4];norm[k+2]=vertex[j+5];
+   }
+   const geo=new THREE.BufferGeometry();
+   geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+   geo.setAttribute("normal",new THREE.BufferAttribute(norm,3));
+   geo.setIndex(new THREE.BufferAttribute(new Uint32Array(index),1));
+   const rgb=colorOverrides[group]||"#aaaaaa";
+   const mat=new THREE.MeshLambertMaterial({color:rgb,side:THREE.DoubleSide,transparent:group==="Arquitectura",opacity:group==="Arquitectura"?.33:1,depthWrite:group!=="Arquitectura"});
+   const mesh=new THREE.Mesh(geo,mat);
+   mesh.applyMatrix4(new THREE.Matrix4().fromArray(Array.from(placed.flatTransformation)));
+   mesh.userData.entry=entry;root.add(mesh);objects.push(mesh);entry.objects.push(mesh);
+   geometry.delete?.();
+  }
+  records.push(entry);meshesById.set(id,entry);
+ });
+ if(!records.length)throw new Error("El archivo no contiene geometría visible.");
+ const box=new THREE.Box3().setFromObject(root),center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+ const maxSize=Math.max(size.x,size.y,size.z,1),distance=maxSize*2;
+ let yaw=Math.PI/4,pitch=Math.PI/5,zoom=1,active=false;
+ function setCamera(mode="axo"){
+  if(mode==="plan"){yaw=0;pitch=Math.PI/2-.001}else if(mode==="axo"){yaw=Math.PI/4;pitch=Math.PI/5}
+  refreshCamera();
+ }
+ function refreshCamera(){
+  camera.position.set(center.x+distance*Math.cos(pitch)*Math.sin(yaw),center.y+distance*Math.sin(pitch),center.z+distance*Math.cos(pitch)*Math.cos(yaw));
+  camera.lookAt(center);const w=Math.max(host.clientWidth,100),h=Math.max(host.clientHeight,100),ratio=w/h,extent=maxSize*.73/zoom;
+  camera.left=-extent*ratio;camera.right=extent*ratio;camera.top=extent;camera.bottom=-extent;camera.updateProjectionMatrix();
+  renderer.setSize(w,h,false);renderer.render(scene,camera);
+ }
+ const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+ let down=null;
+ const onDown=e=>{down={x:e.clientX,y:e.clientY};active=true;renderer.domElement.setPointerCapture(e.pointerId)};
+ const onMove=e=>{if(!active||!down)return;if(!orbit)return;
+  yaw-=(e.movementX||0)*.006;pitch=Math.max(-1.4,Math.min(1.5,pitch+(e.movementY||0)*.006));refreshCamera()};
+ const onUp=e=>{active=false;if(!down)return;
+  const delta=Math.abs(e.clientX-down.x)+Math.abs(e.clientY-down.y);down=null;if(delta>7)return;
+  const r=renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(mouse,camera);const hit=ray.intersectObjects(objects.filter(o=>o.visible),false)[0];
+  onSelect(hit?hit.object.userData.entry:null);
+ };
+ const onWheel=e=>{e.preventDefault();zoom=Math.max(.2,Math.min(8,zoom*(e.deltaY>0?.91:1.09)));refreshCamera()};
+ let orbit=false;
+ renderer.domElement.addEventListener("pointerdown",onDown);
+ renderer.domElement.addEventListener("pointermove",onMove);
+ renderer.domElement.addEventListener("pointerup",onUp);
+ renderer.domElement.addEventListener("wheel",onWheel,{passive:false});
+ cleanups.push(()=>{renderer.domElement.removeEventListener("pointerdown",onDown);renderer.domElement.removeEventListener("pointermove",onMove);renderer.domElement.removeEventListener("pointerup",onUp);renderer.domElement.removeEventListener("wheel",onWheel)});
+ observer=new ResizeObserver(()=>refreshCamera());observer.observe(host);refreshCamera();
+ const controller={
+  levels:[...levels].filter(x=>x!=="Todos").sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})),
+  systems:[...groups].sort(),
+  count:records.length,
+  setView(mode){orbit=mode==="orbit";if(mode!=="orbit")setCamera(mode)},
+  reset(){zoom=1;setCamera("axo")},
+  setLevel(level){for(const o of objects){const e=o.userData.entry;o.visible=(level==="Todos"||e.level===level)&&(!visibleGroups||visibleGroups.has(e.group))}refreshCamera()},
+  setSystems(ids){visibleGroups=new Set(ids);applyFilters()},
+  setColor(group,hex){colorOverrides[group]=hex;for(const o of objects)if(o.userData.entry.group===group)o.material.color.set(hex);refreshCamera()},
+  dispose(){if(removed)return;removed=true;observer?.disconnect();cleanups.forEach(f=>f());for(const obj of objects){obj.geometry.dispose();obj.material.dispose()}renderer.dispose();host.replaceChildren();try{api.CloseModel(modelID)}catch{}}
+ };
+ let visibleGroups=null,currentLevel="Todos";
+ function applyFilters(){for(const o of objects){const e=o.userData.entry;o.visible=(currentLevel==="Todos"||currentLevel===e.level)&&(!visibleGroups||visibleGroups.has(e.group))}refreshCamera()}
+ controller.setLevel=level=>{currentLevel=level;applyFilters()};
+ onModel({levels:controller.levels,systems:controller.systems,count:controller.count});
+ return controller;
+ }catch(e){
+  try{if(api&&modelID!=null)api.CloseModel(modelID)}catch{}
+  try{renderer?.dispose()}catch{}
+  host.replaceChildren();
+  throw e;
+ }
+}
