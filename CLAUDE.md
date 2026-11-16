@@ -27,6 +27,15 @@ Visor BIM web **de IMPIANTI S.R.L.**, independiente de GLI1. Audiencia: personal
 8. Exportador opcional C# Revit 2025/2026/2027 solo si aporta valor futuro, no bloquear la experiencia de mantenimiento.
 6. Integración modular al Centro de Operaciones existente sin romper sus rutas, seguridad ni datos.
 
+## UX y filtros obligatorios
+- Audiencia: mantenimiento, incluso desde un teléfono luego de escanear un QR. No exigir conocimientos BIM.
+- Selector principal: obra → piso → equipo. La etiqueta visible debe priorizar **nombre de tipo Revit**, leyendo la relación IFC `IfcRelDefinesByType`. Si no existe, usar nombre de instancia, etiqueta y finalmente clase IFC. No confundir familia con tipo.
+- Independientemente del sistema, permitir marcar/desmarcar categorías IFC: arquitectura, equipos, cañerías, accesorios de cañerías, conductos rígidos, conductos flexibles y terminales. Atajos: Solo equipos, Cañerías + equipos y Ver todo.
+- Después permitir filtrar por sistema: agua fría, agua caliente, mando, retorno, inyección, extracción, etc., si el IFC conserva los parámetros. Parámetro configurable por obra: Nombre de sistema, Comentarios, abreviatura o compartido.
+- Mostrar proximidad de instalaciones alrededor de un equipo sin exigir conectores. **No afirmar que haya una conexión real**.
+- Cámara ortográfica axonométrica predeterminada, planta y órbita opcionales. Gran legibilidad de controles móviles.
+- Diferenciar muy claramente el SVG de demo (ilustrativo) de la carga real de IFC.
+
 ## Reglas de trabajo
 - Proponer cambios incrementales; ejecutar pruebas antes de integrar.
 - No reemplazar otros módulos del Centro de Operaciones.
