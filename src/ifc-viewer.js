@@ -91,6 +91,7 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
    return dx*dx+dy*dy+dz*dz;
  }
  function nearElements(entry,limit=14){
+   if(entry && !entry.bounds)entry=records.find(x=>x.id===entry.id);
    if(!entry?.bounds)return [];
    const span=entry.bounds.getSize(new THREE.Vector3()).length();
    const searchRadius=Math.max(span*1.5,maxSize*.018);
