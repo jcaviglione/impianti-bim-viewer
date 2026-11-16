@@ -2,7 +2,7 @@
 
 Interfaz ligera para que mantenimiento consulte obras por nivel, instalación y equipo, con una vista axonométrica fácil de usar.
 
-## Estado: MVP de validación
+## Estado: Estado de validación
 
 - Inicio con listado de obras, búsqueda y creación de una obra.
 - Carga de IFC local desde el navegador; visualización tridimensional por Web-IFC + Three.js (dependencias bajo demanda).
@@ -33,7 +33,7 @@ Alternativa: publicar este repositorio como sitio estático (GitHub Pages/Vercel
 4. Seleccionar SS1, SS2, PB u otro nivel exportado. Activar/desactivar instalaciones, seleccionar un elemento y orbitar con el botón.
 5. Verificar en el IFC real la clasificación de sistemas: depende de cómo Revit exportó tipos, relaciones y nombres. Si faltan datos, no se inventan.
 
-## Limitaciones técnicas del MVP
+## Limitaciones técnicas
 
 - IFC como formato de entrada, no archivos .RVT directos.
 - Lectura y geometría en el propio navegador; todavía no hay conversión persistida optimizada ni streaming.
