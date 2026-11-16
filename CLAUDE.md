@@ -5,13 +5,13 @@ Visor BIM web **de IMPIANTI S.R.L.**, independiente de GLI1. Audiencia: personal
 
 ## Arquitectura actual
 - `index.html` y `styles.css`: sitio estático sin bundler.
-- `src/app.js`: interfaz, estado, proyectos, IndexedDB local, controles, demo SVG.
+- `src/app.js`: interfaz, estado, proyectos, IndexedDB local y filtros de visualización. No incluye obra de ejemplo.
 - `src/ifc-viewer.js`: importación bajo demanda de Web-IFC y Three.js; escena ortográfica IFC.
 - Dependencias IFC vía CDN; considerar fijar, autohospedar y auditar las dependencias para producción.
 
 ## NO asumir
 - IndexedDB NO sincroniza obras con otros usuarios.
-- El SVG de demo NO es geometría de un archivo real.
+- El listado de obras empieza vacío. No reincorporar modelos de ejemplo ni proyectos ficticios a la interfaz pública.
 - Los sistemas inferidos desde IFC NO equivalen a una red hidráulica validada.
 - Los QR y la ruta hidráulica entre equipos aún NO están implementados.
 - Los colores y la fuente del logo deben contrastarse con Calias antes de considerar la identidad cerrada.
@@ -34,7 +34,7 @@ Visor BIM web **de IMPIANTI S.R.L.**, independiente de GLI1. Audiencia: personal
 - Después permitir filtrar por sistema: agua fría, agua caliente, mando, retorno, inyección, extracción, etc., si el IFC conserva los parámetros. Parámetro configurable por obra: Nombre de sistema, Comentarios, abreviatura o compartido.
 - Mostrar proximidad de instalaciones alrededor de un equipo sin exigir conectores. **No afirmar que haya una conexión real**.
 - Cámara ortográfica axonométrica predeterminada, planta y órbita opcionales. Gran legibilidad de controles móviles.
-- Diferenciar muy claramente el SVG de demo (ilustrativo) de la carga real de IFC.
+- La pantalla pública se centra en la carga de IFC reales y la consulta de equipos; evitar textos promocionales, de prueba o sobre tecnologías internas.
 
 ## Reglas de trabajo
 - Proponer cambios incrementales; ejecutar pruebas antes de integrar.
