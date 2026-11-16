@@ -1,0 +1,22 @@
+name: Check static app
+on:
+  push:
+  pull_request:
+jobs:
+  syntax-and-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/app.js
+          node --check src/ifc-viewer.js
+      - name: Check required assets
+        run: |
+          test -s index.html
+          test -s styles.css
+          test -s README.md
+          test -s CLAUDE.md
