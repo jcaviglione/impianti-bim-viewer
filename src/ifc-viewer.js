@@ -58,13 +58,31 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
    for(const e of rel.RelatedElements||[])if(e?.value!=null)levelOf.set(e.value,label);
   }
  }catch(e){console.warn("Sin niveles IFC exportados:",e)}
+ // IFC type assignments contain the Revit type name, which may differ from
+ // the family or element instance name. Prefer this for the maintenance list.
+ const typeNames=new Map();
+ try{
+   const relations=api.GetLineIDsWithType(modelID,IFC.IFCRELDEFINESBYTYPE);
+   for(let i=0;i<relations.size();i++){
+     const relation=line(relations.get(i));
+     const t=line(relation.RelatingType?.value);
+     const typeName=value(t.Name)||value(t.ObjectType);
+     if(!typeName)continue;
+     for(const obj of relation.RelatedObjects||[]){
+       if(obj?.value!=null)typeNames.set(obj.value,typeName);
+     }
+   }
+ }catch(error){console.warn("No se pudo obtener la relación IFC de nombres de tipo:",error)}
  status("Construyendo geometría…");
  const meshesById=new Map();
  api.StreamAllMeshes(modelID,flat=>{
-  const id=flat.expressID,info=line(id),type=api.GetNameFromTypeCode(info.type||0)||"Elemento IFC",name=value(info.Name)||type;
-  const group=nameFor(type,name),level=levelOf.get(id)||"Sin nivel",category=categoryFor(type,name,value(info.PredefinedType));
+  const id=flat.expressID,info=line(id),type=api.GetNameFromTypeCode(info.type||0)||"Elemento IFC";
+  const instanceName=value(info.Name),typeName=typeNames.get(id)||value(info.ObjectType);
+  const name=typeName||instanceName||value(info.Tag)||type;
+  const group=nameFor(type,instanceName||typeName||name);
+  const level=levelOf.get(id)||"Sin nivel",category=categoryFor(type,instanceName||typeName||name,value(info.PredefinedType));
   groups.add(group);levels.add(level);
-  const entry={id,name,type,group,category,level,guid:value(info.GlobalId),tag:value(info.Tag),objects:[]};
+  const entry={id,name,instanceName,typeName,type,group,category,level,guid:value(info.GlobalId),tag:value(info.Tag),objects:[]};
   for(let i=0;i<flat.geometries.size();i++){
    const placed=flat.geometries.get(i),geometry=api.GetGeometry(modelID,placed.geometryExpressID);
    const vertex=api.GetVertexArray(geometry.GetVertexData(),geometry.GetVertexDataSize());
@@ -152,7 +170,7 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   levels:[...levels].filter(x=>x!=="Todos").sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})),
   systems:[...groups].sort(),
   count:records.length,
-  equipment:records.filter(entry=>["equipment","terminals"].includes(entry.category)).map(({id,name,type,group,category,level,guid,tag})=>({id,name,type,group,category,level,guid,tag})),
+  equipment:records.filter(entry=>["equipment","terminals"].includes(entry.category)).map(({id,name,instanceName,typeName,type,group,category,level,guid,tag})=>({id,name,instanceName,typeName,type,group,category,level,guid,tag})),
   getNearby(entry){return nearElements(entry)},
   focusNearby(entry){
     if(!entry)return [];
