@@ -191,7 +191,7 @@ function renderFilterPanel(){
   const content=h("div",{class:"panel-pad"},[h("div",{class:"panel-heading",text:"Explorar la instalación"})]);
   content.append(h("div",{class:"section-label",text:"01 · Elegí un nivel"}));
   const floorlist=h("div",{class:"floor-list"});
-  for(const floor of levels())floorlist.append(h("button",{class:"pill "+(state.floor===floor?"active":""),text:floor,onClick:()=>{state.floor=floor;state.selected=null;if(state.model)state.model.setLevel(floor);renderFilterPanel();renderInspector();updateDemoScene()}}));
+  for(const floor of levels())floorlist.append(h("button",{class:"pill "+(state.floor===floor?"active":""),text:floor,onClick:()=>{state.floor=floor;state.selected=null;if(state.model)state.model.setLevel(floor);renderFilterPanel();renderInspector();}}));
   content.append(floorlist,h("div",{class:"section-label",text:"02 · Mostrar / ocultar elementos"}));
   const categoryActions=h("div",{class:"floor-list",style:"margin-bottom:12px"});
   const presets=[
@@ -226,12 +226,12 @@ function renderFilterPanel(){
   for(const system of available){
     const row=h("div",{class:"system-item"});
     const checked=h("input",{type:"checkbox","aria-label":"Mostrar "+system});checked.checked=state.systems.includes(system);
-    checked.addEventListener("change",()=>{state.systems=checked.checked?[...new Set([...state.systems,system])]:state.systems.filter(s=>s!==system);state.model?.setSystems(state.systems);updateDemoScene()});
+    checked.addEventListener("change",()=>{state.systems=checked.checked?[...new Set([...state.systems,system])]:state.systems.filter(s=>s!==system);state.model?.setSystems(state.systems);});
     const title=h("label",{text:system});title.addEventListener("click",()=>checked.click());
     const swatch=h("span",{class:"colorwrap"});
     const btn=h("button",{class:"swatch",type:"button",style:"background:"+(state.colors[system]||"#aaaaaa"),title:"Editar color de "+system});
     const picker=h("input",{type:"color",value:state.colors[system]||"#aaaaaa","aria-label":"Color de "+system});
-    picker.addEventListener("input",()=>{state.colors[system]=picker.value;btn.style.background=picker.value;state.model?.setColor(system,picker.value);updateDemoScene()});
+    picker.addEventListener("input",()=>{state.colors[system]=picker.value;btn.style.background=picker.value;state.model?.setColor(system,picker.value);});
     btn.addEventListener("click",()=>picker.click());swatch.append(btn,picker);
     row.append(checked,title,swatch);content.append(row);
   }
@@ -270,7 +270,7 @@ function renderViewport(){
 function refreshToolbar(){
   const tools=$("#viewTools");if(!tools)return;tools.replaceChildren();
   const views=[["axo","Axonométrica"],["plan","Planta"],["orbit","Orbitar"]];
-  for(const [key,text] of views)tools.append(h("button",{class:"btn btn-ghost btn-small "+(state.view===key?"active":""),text,onClick:()=>{state.view=key;state.model?.setView(key);refreshToolbar();updateDemoScene()}}));
+  for(const [key,text] of views)tools.append(h("button",{class:"btn btn-ghost btn-small "+(state.view===key?"active":""),text,onClick:()=>{state.view=key;state.model?.setView(key);refreshToolbar();}}));
 }
 
 function renderInspector(){
