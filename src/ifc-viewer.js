@@ -72,6 +72,9 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
    const mesh=new THREE.Mesh(geo,mat);
    mesh.applyMatrix4(new THREE.Matrix4().fromArray(Array.from(placed.flatTransformation)));
    mesh.userData.entry=entry;root.add(mesh);objects.push(mesh);entry.objects.push(mesh);
+   // Cache element bounds once. Proximity checks never imply a verified MEP connection.
+   const bounds=new THREE.Box3().setFromObject(mesh);
+   if(entry.bounds)entry.bounds.union(bounds);else entry.bounds=bounds;
    geometry.delete?.();
   }
   records.push(entry);meshesById.set(id,entry);
@@ -79,6 +82,28 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
  if(!records.length)throw new Error("El archivo no contiene geometría visible.");
  const box=new THREE.Box3().setFromObject(root),center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
  const maxSize=Math.max(size.x,size.y,size.z,1),distance=maxSize*2;
+ // IFC exports may not expose the Revit connector graph. Show nearby elements
+ // as a visual aid for technicians, not as hydraulically verified connections.
+ function boxGapSquared(a,b){
+   const dx=Math.max(0,a.min.x-b.max.x,b.min.x-a.max.x);
+   const dy=Math.max(0,a.min.y-b.max.y,b.min.y-a.max.y);
+   const dz=Math.max(0,a.min.z-b.max.z,b.min.z-a.max.z);
+   return dx*dx+dy*dy+dz*dz;
+ }
+ function nearElements(entry,limit=14){
+   if(!entry?.bounds)return [];
+   const span=entry.bounds.getSize(new THREE.Vector3()).length();
+   const searchRadius=Math.max(span*1.5,maxSize*.018);
+   const radius2=searchRadius*searchRadius;
+   return records.filter(candidate=>
+     candidate.id!==entry.id && candidate.bounds &&
+     candidate.group!=="Arquitectura" &&
+     (entry.level==="Sin nivel"||candidate.level==="Sin nivel"||candidate.level===entry.level)
+   ).map(candidate=>({entry:candidate,score:boxGapSquared(entry.bounds,candidate.bounds)}))
+    .filter(x=>x.score<=radius2).sort((a,b)=>a.score-b.score)
+    .slice(0,limit).map(x=>x.entry);
+ }
+ let nearbyIds=null;
  let yaw=Math.PI/4,pitch=Math.PI/5,zoom=1,active=false;
  function setCamera(mode="axo"){
   if(mode==="plan"){yaw=0;pitch=Math.PI/2-.001}else if(mode==="axo"){yaw=Math.PI/4;pitch=Math.PI/5}
@@ -114,6 +139,16 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   levels:[...levels].filter(x=>x!=="Todos").sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})),
   systems:[...groups].sort(),
   count:records.length,
+  equipment:records.filter(entry=>/EQUIPMENT|TERMINAL|PUMP|FAN|CHILLER|BOILER|COIL|VALVE|HEATEXCHANGER|ENERGYCONVERSION|FLOWCONTROLLER|DISTRIBUTIONCONTROL|MEDICALDEVICE/i.test(entry.type)).map(({id,name,type,group,level,guid,tag})=>({id,name,type,group,level,guid,tag})),
+  getNearby(entry){return nearElements(entry)},
+  focusNearby(entry){
+    if(!entry)return [];
+    const nearby=nearElements(entry);
+    nearbyIds=new Set([entry.id,...nearby.map(x=>x.id)]);
+    applyFilters();
+    return nearby;
+  },
+  clearNearby(){nearbyIds=null;applyFilters()},
   setView(mode){orbit=mode==="orbit";if(mode!=="orbit")setCamera(mode)},
   reset(){zoom=1;setCamera("axo")},
   setLevel(level){for(const o of objects){const e=o.userData.entry;o.visible=(level==="Todos"||e.level===level)&&(!visibleGroups||visibleGroups.has(e.group))}refreshCamera()},
@@ -122,7 +157,16 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
   dispose(){if(removed)return;removed=true;observer?.disconnect();cleanups.forEach(f=>f());for(const obj of objects){obj.geometry.dispose();obj.material.dispose()}renderer.dispose();host.replaceChildren();try{api.CloseModel(modelID)}catch{}}
  };
  let visibleGroups=null,currentLevel="Todos";
- function applyFilters(){for(const o of objects){const e=o.userData.entry;o.visible=(currentLevel==="Todos"||currentLevel===e.level)&&(!visibleGroups||visibleGroups.has(e.group))}refreshCamera()}
+ function applyFilters(){
+   for(const o of objects){
+     const e=o.userData.entry;
+     const inFloor=currentLevel==="Todos"||currentLevel===e.level;
+     const allowedGroup=!visibleGroups||visibleGroups.has(e.group);
+     const nearAllowed=!nearbyIds||nearbyIds.has(e.id)||e.group==="Arquitectura";
+     o.visible=inFloor&&allowedGroup&&nearAllowed;
+   }
+   refreshCamera();
+ }
  controller.setLevel=level=>{currentLevel=level;applyFilters()};
  onModel({levels:controller.levels,systems:controller.systems,count:controller.count});
  return controller;
