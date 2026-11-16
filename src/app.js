@@ -15,17 +15,6 @@ const h = (tag,attrs={},children=[]) => {
   return el;
 };
 const colorDefaults={"Arquitectura":"#acb2b4","Agua fría":"#348edc","Agua caliente":"#db6757","Retorno":"#e5a33b","Climatización":"#49a6a6","Incendio":"#dc5252","Sanitaria":"#86a77b","Otros MEP":"#9a86d5"};
-const demo={
-  id:"demo",name:"Sanatorio · Demo",location:"Ejemplo de visualización",file:false,
-  floors:["SS2","SS1","PB","P1","P2"],systems:["Agua fría","Agua caliente","Retorno","Climatización","Incendio"],
-  equipment:[
-    {id:"CH-01",name:"Chiller CH-01",floor:"SS1",system:"Agua fría",kind:"Equipo mecánico",details:{"Código":"CH-01","Categoría":"Equipos mecánicos","Capacidad":"Ejemplo — sin datos reales","Ubicación":"1.º subsuelo"}},
-    {id:"UTA-01",name:"Unidad tratamiento aire UTA-01",floor:"SS1",system:"Climatización",kind:"Equipo mecánico",details:{"Código":"UTA-01","Categoría":"Equipos mecánicos","Capacidad":"Ejemplo — sin datos reales","Ubicación":"1.º subsuelo"}},
-    {id:"BC-02",name:"Bomba circulación BC-02",floor:"SS2",system:"Retorno",kind:"Equipo mecánico",details:{"Código":"BC-02","Categoría":"Equipos mecánicos","Caudal":"Ejemplo — sin datos reales","Ubicación":"2.º subsuelo"}},
-    {id:"VE-01",name:"Ventilador VE-01",floor:"PB",system:"Climatización",kind:"Equipo mecánico",details:{"Código":"VE-01","Categoría":"Equipos mecánicos","Caudal":"Ejemplo — sin datos reales","Ubicación":"Planta baja"}},
-    {id:"HI-01",name:"Hidrante HI-01",floor:"PB",system:"Incendio",kind:"Accesorio",details:{"Código":"HI-01","Categoría":"Protección contra incendios","Ubicación":"Planta baja"}}
-  ]
-};
 const categoryOptions=[
   {id:"architecture",label:"Arquitectura",hint:"Muros, losas y puertas"},
   {id:"equipment",label:"Equipos",hint:"Chillers, bombas, UTAs"},
@@ -59,10 +48,9 @@ function sidebar(){
   return h("aside",{class:"sidebar"},[
     brand(),
     h("nav",{class:"side-nav","aria-label":"Secciones"},[
-      h("button",{class:"nav-item "+(state.page==="home"?"active":""),onClick:()=>goHome(),text:icon("building")+"  Obras"}),
-      h("button",{class:"nav-item "+(state.project?.id==="demo"?"active":""),onClick:()=>openProject(demo),text:icon("view")+"  Explorar demo"})
+      h("button",{class:"nav-item "+(state.page==="home"?"active":""),onClick:()=>goHome(),text:icon("building")+"  Obras"})
     ]),
-    h("div",{class:"side-bottom",text:"IMPIANTI S.R.L.\nPrototipo local · Sin usuarios\nLos IFC no se envían a servidores."})
+    h("div",{class:"side-bottom",text:"IMPIANTI S.R.L."})
   ])
 }
 function topbar(){
@@ -73,7 +61,7 @@ function topbar(){
       h("span",{text:"/"}),
       h("strong",{text:state.project?state.project.name:"Obras"})
     ]),
-    h("div",{class:"user-pill",text:"● Prototipo de prueba"})
+    h("div",{class:"user-pill",text:"VISOR BIM"})
   ])
 }
 function render(){
@@ -91,46 +79,37 @@ function projectIllustration(){
   svg.innerHTML='<g transform="translate(75 12)" fill="none" stroke="#aab4b3" stroke-width="1.2"><path d="M0 50L100 10L210 57L107 102Z M0 50V92L107 143V102 M107 143L210 98V57 M36 36V108 M74 22V126 M144 29V128 M180 44V111" opacity=".65"/><path d="M0 78L107 126L210 83 M0 64L107 113L210 69" opacity=".48"/><path d="M45 95L113 65L170 91" stroke="#ef8d37" stroke-width="6" stroke-linecap="round"/><path d="M45 109L112 79L169 105" stroke="#468dbc" stroke-width="5" stroke-linecap="round"/></g>';
   return svg;
 }
+
 function homePage(){
-  const wrapper=h("section",{});
-  wrapper.append(h("div",{class:"page-header"},[
-    h("div",{},[
-      h("div",{class:"eyebrow",text:"GESTIÓN VISUAL DE OBRAS"}),
-      h("h1",{text:"Todas tus instalaciones, a la vista."}),
-      h("p",{text:"Elegí una obra, un piso y el equipo que necesitás. Sin complicaciones."})
-    ]),
+  const page=h("section",{});
+  page.append(h("div",{class:"page-header"},[
+    h("div",{},[h("div",{class:"eyebrow",text:"IMPIANTI · INSTALACIONES"}),h("h1",{text:"Obras"}),h("p",{text:"Seleccioná una obra para visualizar sus instalaciones."})]),
     h("button",{class:"btn btn-primary",text:"+ Nueva obra",onClick:()=>{state.openDialog=true;render()}})
   ]));
-  const overview=h("div",{class:"overview"},[
-    h("div",{},[h("h2",{text:"Una forma más simple de recorrer cada obra."}),h("p",{text:"Vista axonométrica, filtros por nivel, sistemas y fichas de equipos."})]),
-    h("button",{class:"btn btn-white",text:"Explorar demo "+icon("arrow"),onClick:()=>openProject(demo)})
-  ]);
-  wrapper.append(overview);
-  const searchInput=h("input",{class:"search",type:"search",placeholder:"Buscar obra…","aria-label":"Buscar obras",value:state.query});
-  searchInput.addEventListener("input",e=>{
-    state.query=e.target.value;
-    const cards=$(".grid-cards");
-    if(cards)for(const card of cards.children){
-      const matches=(card.dataset.search||"").includes(state.query.toLowerCase());
-      card.style.display=matches?"":"none";
-    }
-  });
-  wrapper.append(h("div",{class:"page-header"},[
-    h("div",{},[h("h2",{text:"Mis obras"}),h("p",{text:"Obras guardadas en este navegador"})]),searchInput
-  ]));
+  const search=h("input",{class:"search",type:"search",placeholder:"Buscar obra…","aria-label":"Buscar obras"});
   const cards=h("div",{class:"grid-cards"});
-  const items=[demo,...state.projects].filter(p=>(p.name+" "+p.location).toLowerCase().includes(state.query.toLowerCase()));
-  for(const p of items){
-    const img=h("div",{class:"project-visual"},[projectIllustration()]);
-    img.append(h("span",{class:"tag "+(p.id==="demo"?"badge-demo":""),style:"position:absolute;top:12px;left:12px",text:p.id==="demo"?"EJEMPLO":"IFC LOCAL"}));
-    cards.append(h("article",{class:"card project-card","data-search":(p.name+" "+p.location).toLowerCase(),role:"button",tabindex:"0",onClick:()=>openProject(p),onKeydown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProject(p)}}},[
-      img,h("div",{class:"project-name",text:p.name}),h("div",{class:"project-meta",text:p.location||"Ubicación sin definir"}),
-      h("div",{class:"project-foot"},[h("span",{text:p.id==="demo"?"Exploración ilustrativa":"Modelo IFC guardado"}),h("span",{text:"Abrir "+icon("arrow")})])
-    ]))
-  }
-  if(!items.length)cards.append(h("div",{class:"empty",text:"No se encontraron obras."}));
-  wrapper.append(cards,h("div",{class:"footnote",text:"Los IFC no se publican: el prototipo los procesa y guarda solamente en este navegador."}));
-  return wrapper;
+  const refresh=()=>{
+    cards.replaceChildren();
+    const matches=state.projects.filter(p=>(p.name+" "+p.location).toLowerCase().includes(search.value.toLowerCase()));
+    if(!matches.length){
+      cards.append(h("div",{class:"empty"},[
+        h("h2",{text:search.value?"No se encontraron obras":"Sin obras cargadas"}),
+        h("p",{text:search.value?"Probá con otro nombre.":"Cargá el primer IFC para comenzar."}),
+        h("button",{class:"btn btn-primary",text:"+ Nueva obra",onClick:()=>{state.openDialog=true;render()}})
+      ]));return;
+    }
+    for(const p of matches){
+      const preview=h("div",{class:"project-visual"},[projectIllustration()]);
+      preview.append(h("span",{class:"tag",style:"position:absolute;top:12px;left:12px",text:"IFC"}));
+      cards.append(h("article",{class:"card project-card",role:"button",tabindex:"0",onClick:()=>openProject(p),onKeydown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProject(p)}}},[
+        preview,h("div",{class:"project-name",text:p.name}),h("div",{class:"project-meta",text:p.location||"Ubicación sin definir"}),
+        h("div",{class:"project-foot"},[h("span",{text:"Modelo IFC"}),h("span",{text:"Abrir →"})])
+      ]));
+    }
+  };
+  search.addEventListener("input",refresh);
+  page.append(h("div",{class:"page-header"},[h("h2",{text:"Mis obras"}),search]),cards);
+  refresh();return page;
 }
 function projectDialog(){
   const shade=h("div",{class:"form-overlay"});
@@ -139,13 +118,13 @@ function projectDialog(){
     h("h2",{text:"Nueva obra"}),
     h("button",{class:"btn btn-ghost",text:"✕",onClick:()=>{state.openDialog=false;render()}})
   ]));
-  card.append(h("p",{text:"Cargá un modelo IFC exportado de Revit 2025 o 2026. Nada se sube a servidores."}));
+  card.append(h("p",{text:"Cargá un modelo IFC exportado desde Revit."}));
   const form=h("form",{});
   const name=h("input",{type:"text",placeholder:"Ej. Sanatorio Yacente",required:"",maxlength:"90"});
   const location=h("input",{type:"text",placeholder:"Ej. Córdoba · Argentina",maxlength:"120"});
   const file=h("input",{type:"file",accept:".ifc,application/octet-stream",required:"",style:"display:none"});
   const hint=h("div",{class:"upload-zone",text:"Elegir archivo .ifc\n\n",onClick:()=>file.click()});
-  hint.append(h("div",{text:"Click para seleccionar un IFC desde tu equipo"}),h("small",{text:"Sin RVT directo · El tamaño depende de la memoria del equipo"}));
+  hint.append(h("div",{text:"Seleccionar archivo IFC"}),h("small",{text:"Formato .ifc"}));
   file.addEventListener("change",()=>{hint.replaceChildren(h("strong",{text:file.files?.[0]?.name||"Elegir archivo"}),h("div",{text:"Archivo seleccionado correctamente"}))});
   form.append(h("label",{class:"form-field"},[h("span",{text:"Nombre de la obra *"}),name]));
   form.append(h("label",{class:"form-field"},[h("span",{text:"Lugar / ubicación"}),location]));
@@ -168,8 +147,8 @@ function projectDialog(){
 function disposeModel(){openSeq++;if(state.model){state.model.dispose();state.model=null}}
 function openProject(p){
   disposeModel();state.project=p;state.page="viewer";state.floor="Todos";state.selected=null;state.view="axo";
-  state.systems=[...(p.id==="demo"?p.systems:[])];state.categories=categoryOptions.map(c=>c.id);render();
-  if(p.id!=="demo")setTimeout(()=>mountModel(p),0);
+  state.systems=[];state.categories=categoryOptions.map(c=>c.id);render();
+  setTimeout(()=>mountModel(p),0);
 }
 async function mountModel(project){
   const seq=++openSeq,host=$("#canvasHost"),loading=$("#loading");
@@ -192,9 +171,9 @@ function viewerPage(){
   w.append(h("div",{class:"page-header"},[
     h("div",{},[
       h("button",{class:"btn btn-ghost btn-small",text:"← Volver a obras",onClick:goHome}),
-      h("h1",{text:p.name}),h("p",{text:(p.location||"Sin ubicación")+" · "+(p.id==="demo"?"Datos ilustrativos":"Archivo IFC local")})
+      h("h1",{text:p.name}),h("p",{text:p.location||"Instalaciones"})
     ]),
-    h("span",{class:"tag "+(p.id==="demo"?"badge-demo":""),text:p.id==="demo"?"MODO DEMO":"VISTA BIM"})
+    h("span",{class:"tag",text:"VISOR 3D"})
   ]));
   const layout=h("div",{class:"viewer-layout"},[
     h("aside",{class:"panel left-filters",id:"filterPanel"}),
@@ -205,7 +184,7 @@ function viewerPage(){
   queueMicrotask(()=>{if(state.page==="viewer"){renderFilterPanel();renderInspector();renderViewport()}});
   return w;
 }
-function levels(){return state.project?.id==="demo"?["Todos",...demo.floors]:["Todos",...(state.project?._levels||[])]}
+function levels(){return ["Todos",...(state.project?._levels||[])]}
 function renderFilterPanel(){
   const panel=$("#filterPanel");if(!panel)return;
   panel.replaceChildren();
@@ -223,7 +202,7 @@ function renderFilterPanel(){
   for(const [caption,ids] of presets)categoryActions.append(
     h("button",{class:"pill",text:caption,onClick:()=>{
       state.categories=[...ids];state.model?.setCategories(state.categories);
-      renderFilterPanel();updateDemoScene();
+      renderFilterPanel();
     }})
   );
   content.append(categoryActions);
@@ -233,7 +212,7 @@ function renderFilterPanel(){
     box.checked=state.categories.includes(category.id);
     box.addEventListener("change",()=>{
       state.categories=box.checked?[...state.categories,category.id]:state.categories.filter(id=>id!==category.id);
-      state.model?.setCategories(state.categories);updateDemoScene();
+      state.model?.setCategories(state.categories);
     });
     const label=h("label",{style:"display:flex;flex-direction:column;gap:2px"});
     label.append(h("span",{text:category.label}),h("small",{style:"color:#929292;font-size:10px;font-weight:400",text:category.hint}));
@@ -242,7 +221,7 @@ function renderFilterPanel(){
     content.append(row);
   }
   content.append(h("div",{class:"section-label",text:"03 · Filtrar por sistema"}));
-  const available=state.project?.id==="demo"?demo.systems:state.project?._systems||[];
+  const available=state.project?._systems||[];
   if(!available.length)content.append(h("p",{class:"project-meta",text:"Los sistemas aparecerán al procesar el IFC."}));
   for(const system of available){
     const row=h("div",{class:"system-item"});
@@ -261,7 +240,6 @@ function renderFilterPanel(){
   const results=h("div",{id:"equipmentResults",style:"margin-top:10px"});
   const drawResults=()=>{
     results.replaceChildren();const q=search.value.trim().toLowerCase();
-    if(state.project?.id!=="demo"){
       const items=(state.project?._equipment||[]).filter(e=>
         (state.floor==="Todos"||e.level===state.floor)&&
         (e.name+" "+(e.typeName||"")+" "+(e.instanceName||"")+" "+e.type+" "+e.tag).toLowerCase().includes(q)
@@ -273,23 +251,19 @@ function renderFilterPanel(){
       }));
       if(!items.length)results.append(h("p",{class:"project-meta",text:"No se encontraron equipos en este nivel. También podés tocar cualquier elemento del modelo."}));
       return;
-    }
-    const items=demo.equipment.filter(e=>(state.floor==="Todos"||e.floor===state.floor)&&(e.id+" "+e.name).toLowerCase().includes(q));
-    for(const e of items)results.append(h("button",{class:"nav-item",style:"width:100%;font-size:12px;justify-content:start",text:"◈ "+e.name,onClick:()=>{state.selected=e;renderInspector();updateDemoScene()}}));
-    if(!items.length)results.append(h("p",{class:"project-meta",text:"No hay equipos en este nivel."}));
   };
   search.addEventListener("input",drawResults);content.append(search,results);drawResults();panel.append(content);
 }
 function renderViewport(){
   const area=$("#viewport");if(!area)return;area.replaceChildren();
   const canvas=h("div",{class:"canvas-host",id:"canvasHost"});area.append(canvas);
-  if(state.project.id==="demo"){canvas.append(demoDiagram())}else area.append(h("div",{class:"loading",id:"loading"},[h("div",{class:"spinner"}),h("p",{text:"Preparando el modelo IFC…" })]));
+  area.append(h("div",{class:"loading",id:"loading"},[h("div",{class:"spinner"}),h("p",{text:"Cargando IFC…" })]));
   area.append(h("div",{class:"viewport-toolbar"},[
     h("div",{class:"tool-group",id:"viewTools"}),
     h("div",{class:"tool-group"},[h("button",{class:"btn btn-ghost btn-small",text:"↺ Restablecer",onClick:()=>{state.view="axo";state.model?.reset();refreshToolbar()}})])
   ]));
   area.append(h("div",{class:"view-footer"},[
-    h("div",{class:"tag",text:state.project.id==="demo"?"DIAGRAMA ILUSTRATIVO":"MODELO IFC · LOCAL"}),
+    h("div",{class:"tag",text:"MODELO IFC"}),
     h("span",{text:"Seleccioná un elemento para ver su ficha"})
   ]));refreshToolbar();
 }
@@ -298,121 +272,38 @@ function refreshToolbar(){
   const views=[["axo","Axonométrica"],["plan","Planta"],["orbit","Orbitar"]];
   for(const [key,text] of views)tools.append(h("button",{class:"btn btn-ghost btn-small "+(state.view===key?"active":""),text,onClick:()=>{state.view=key;state.model?.setView(key);refreshToolbar();updateDemoScene()}}));
 }
-function demoDiagram(){
-  const root=h("div",{class:"demo-scene",id:"demoScene"});root.append(createDemoSVG());return root;
-}
-function createDemoSVG(){
-  const ns="http://www.w3.org/2000/svg";const svg=document.createElementNS(ns,"svg");
-  svg.setAttribute("viewBox","0 0 640 410");
-  const valid=(system,level)=>state.systems.includes(system)&&(state.floor==="Todos"||state.floor===level);
-  const visibleCategory=id=>state.categories.includes(id);
-  const demoCategory=system=>system==="Climatización"?"ducts":"pipes";
-  const axo=state.view!=="plan";
-  if(axo){
-    svg.innerHTML=visibleCategory("architecture")?'<g stroke="#b5bfc0" fill="none" stroke-width="1.35" opacity=".62"><path d="M118 140L322 50L537 142L326 237Z M118 140V285L326 382V237 M326 382L537 286V142 M118 189L326 281L537 190 M118 236L326 327L537 239 M159 123V303 M213 102V327 M268 78V355 M376 77V356 M436 102V333 M493 123V306"/><path d="M149 127L357 222M204 103L415 198M254 81L469 175" opacity=".4"/></g>':"";
-    const paths=[
-      {system:"Agua fría",level:"SS1",d:"M165 225L320 288L455 222L506 245",width:8},
-      {system:"Retorno",level:"SS1",d:"M166 250L320 312L451 249L510 270",width:7},
-      {system:"Agua caliente",level:"PB",d:"M166 169L323 237L477 170",width:7},
-      {system:"Climatización",level:"SS1",d:"M202 198L327 254L463 190",width:13},
-      {system:"Incendio",level:"SS2",d:"M173 290L318 351L467 280",width:6}
-    ];
-    for(const p of paths){if(!valid(p.system,p.level)||!visibleCategory(demoCategory(p.system)))continue;const el=document.createElementNS(ns,"path");el.setAttribute("d",p.d);el.setAttribute("fill","none");el.setAttribute("stroke",state.colors[p.system]);el.setAttribute("stroke-width",p.width);el.setAttribute("stroke-linecap","round");svg.append(el)}
-    if(visibleCategory("flexduct")&&valid("Climatización","SS1")){
-      const flex=document.createElementNS(ns,"path");
-      flex.setAttribute("d","M463 190Q485 184 496 207");
-      flex.setAttribute("fill","none");flex.setAttribute("stroke","#efab61");
-      flex.setAttribute("stroke-width","7");flex.setAttribute("stroke-linecap","round");flex.setAttribute("stroke-dasharray","7 4");svg.append(flex);
-    }
-    for(const e of demo.equipment.filter(e=>state.floor==="Todos"||e.floor===state.floor)){
-      if(!state.systems.includes(e.system)||!visibleCategory("equipment"))continue;
-      const pos=({"CH-01":[173,225],"UTA-01":[343,254],"BC-02":[202,308],"VE-01":[461,179],"HI-01":[478,190]})[e.id];
-      const circle=document.createElementNS(ns,"circle");circle.setAttribute("cx",pos[0]);circle.setAttribute("cy",pos[1]);
-      circle.setAttribute("r",state.selected?.id===e.id?"13":"9");circle.setAttribute("fill","#fff");circle.setAttribute("stroke",state.colors[e.system]);
-      circle.setAttribute("stroke-width",state.selected?.id===e.id?"5":"3");circle.setAttribute("style","cursor:pointer");
-      circle.addEventListener("click",()=>{state.selected=e;renderInspector();updateDemoScene()});svg.append(circle);
-    }
-  }else{
-    svg.innerHTML=visibleCategory("architecture")?'<g fill="#f7f9f8" stroke="#b4bec0" stroke-width="2"><path d="M120 85H520V325H120Z"/><path d="M230 85V325M400 85V325M120 205H520"/></g>':"";
-    const paths=[
-      {system:"Agua fría",level:"SS1",d:"M165 250H300V180H485"},
-      {system:"Retorno",level:"SS1",d:"M165 271H322V202H485"},
-      {system:"Agua caliente",level:"PB",d:"M152 151H490"},
-      {system:"Climatización",level:"SS1",d:"M245 105V304H420"},
-      {system:"Incendio",level:"SS2",d:"M165 300H490"}
-    ];
-    for(const p of paths)if(valid(p.system,p.level)&&visibleCategory(demoCategory(p.system))){
-      const el=document.createElementNS(ns,"path");el.setAttribute("d",p.d);el.setAttribute("fill","none");el.setAttribute("stroke",state.colors[p.system]);
-      el.setAttribute("stroke-width","10");el.setAttribute("stroke-linecap","round");svg.append(el);
-    }
-    if(visibleCategory("flexduct")&&valid("Climatización","SS1")){
-      const flex=document.createElementNS(ns,"path");flex.setAttribute("d","M420 304Q441 309 460 287");
-      flex.setAttribute("fill","none");flex.setAttribute("stroke","#efab61");
-      flex.setAttribute("stroke-width","7");flex.setAttribute("stroke-dasharray","7 4");svg.append(flex);
-    }
-    if(visibleCategory("equipment")){
-      for(const e of demo.equipment.filter(e=>(state.floor==="Todos"||e.floor===state.floor)&&state.systems.includes(e.system))){
-        const xy=({"CH-01":[165,250],"UTA-01":[245,105],"BC-02":[165,300],"VE-01":[420,220],"HI-01":[485,151]})[e.id];
-        const dot=document.createElementNS(ns,"circle");dot.setAttribute("cx",xy[0]);dot.setAttribute("cy",xy[1]);
-        dot.setAttribute("r",state.selected?.id===e.id?"13":"9");dot.setAttribute("fill","#fff");
-        dot.setAttribute("stroke",state.colors[e.system]);dot.setAttribute("stroke-width","4");
-        dot.style.cursor="pointer";dot.addEventListener("click",()=>{state.selected=e;renderInspector();updateDemoScene()});svg.append(dot);
-      }
-    }
-  }
-  const label=document.createElementNS(ns,"text");label.setAttribute("x","320");label.setAttribute("y","26");label.setAttribute("text-anchor","middle");label.setAttribute("font-size","13");label.setAttribute("font-weight","700");label.setAttribute("fill","#758583");
-  label.textContent=state.floor==="Todos"?"EDIFICIO · NIVELES ILUSTRATIVOS":"NIVEL "+state.floor;svg.append(label);
-  return svg;
-}
-function updateDemoScene(){const scene=$("#demoScene");if(scene)scene.replaceChildren(createDemoSVG())}
+
 function renderInspector(){
   const panel=$("#inspectorPanel");if(!panel)return;panel.replaceChildren();
   if(!state.selected){
     panel.append(h("div",{class:"inspector-empty"},[
-      h("div",{class:"inspector-icon",text:"◈"}),
-      h("h2",{text:"Elegí un equipo"}),
-      h("p",{text:"Tocá un elemento del modelo o buscá un equipo para consultar su información."})
+      h("div",{class:"inspector-icon",text:"◈"}),h("h2",{text:"Seleccioná un equipo"}),
+      h("p",{text:"Buscá un equipo en la lista o tocá un elemento del plano."})
     ]));return;
   }
   const item=state.selected,box=h("div",{class:"panel-pad"});
-  box.append(h("div",{class:"eyebrow",text:"FICHA DE ELEMENTO"}));
-  box.append(h("h2",{text:item.typeName||item.name||"Elemento BIM"}));
-  box.append(h("span",{class:"tag",text:item.system||item.group||item.type||"Elemento"}));
-  const properties=item.details||{"Nombre de tipo (Revit)":item.typeName||"No exportado","Nombre de instancia":item.instanceName||"No exportado","ID IFC":item.id,"Global ID":item.guid||"No disponible","Categoría IFC":item.type||"Sin identificar","Nivel":item.level||"Sin nivel","Sistema estimado":item.group||"No identificado","Etiqueta":item.tag||"No definida"};
-  for(const [key,value] of Object.entries(properties))box.append(h("div",{class:"info-row"},[h("small",{text:key}),h("strong",{text:safeText(value)})]));
-  if(state.project.id==="demo"){
-    box.append(h("div",{class:"section-label",text:"Visualizar instalación"}));
-    box.append(h("div",{class:"floor-list"},[
-      h("button",{class:"pill",text:"Mostrar sistema",onClick:()=>{state.systems=[item.system];state.floor=item.floor;renderFilterPanel();updateDemoScene()}}),
-      h("button",{class:"pill",text:"Ver en planta",onClick:()=>{state.view="plan";refreshToolbar();updateDemoScene()}}),
-      h("button",{class:"pill",text:"Vista completa",onClick:()=>{state.floor="Todos";state.systems=[...demo.systems];renderFilterPanel();updateDemoScene()}})
-    ]));
-    box.append(h("p",{class:"footnote",text:"Esta ficha es ilustrativa. El trazado de ejemplo no corresponde a una instalación real."}));
-  }else{
-    const nearby=state.model?.getNearby(item)||[];
-    box.append(h("div",{class:"section-label",text:"Instalaciones próximas"}));
-    if(nearby.length){
-      box.append(h("p",{class:"project-meta",text:"Elementos cercanos por posición en el modelo. No significa que estén conectados físicamente."}));
-      const actions=h("div",{class:"floor-list"},[
-        h("button",{class:"pill",text:"Resaltar cercanos",onClick:()=>{
-          if(item.level&&item.level!=="Sin nivel"){state.floor=item.level;state.model?.setLevel(item.level)}
-          state.systems=[...new Set([...state.systems,item.group,...nearby.map(e=>e.group)])];
-          state.model?.setSystems(state.systems);state.model?.focusNearby(item);
-          renderFilterPanel();
-          toast("Mostrando instalaciones próximas, sin confirmar conexiones.");
-        }}),
-        h("button",{class:"pill",text:"Mostrar todo",onClick:()=>{state.model?.clearNearby();state.floor="Todos";state.model?.setLevel("Todos");renderFilterPanel()}}),
-        h("button",{class:"pill",text:"Ver en planta",onClick:()=>{state.view="plan";state.model?.setView("plan");refreshToolbar()}})
-      ]);
-      box.append(actions);
-      for(const e of nearby.slice(0,7))box.append(h("div",{class:"info-row"},[
-        h("small",{text:e.group+" · "+e.level}),
-        h("strong",{text:e.name})
-      ]));
-    }else{
-      box.append(h("p",{class:"project-meta",text:"No se identificaron instalaciones próximas dentro del entorno de búsqueda. Podés explorar los sistemas manualmente."}));
-    }
-    box.append(h("p",{class:"footnote",text:"Vista IFC de prueba. Para clasificar sistemas con Comentarios u otros parámetros, será necesario añadir un mapeo configurable según el modelo."}));
+  box.append(h("div",{class:"eyebrow",text:"EQUIPO / ELEMENTO"}),h("h2",{text:item.typeName||item.name||"Elemento"}));
+  box.append(h("span",{class:"tag",text:item.group||item.type||"Instalación"}));
+  const props={"Nombre de tipo":item.typeName||"No definido","Nombre de instancia":item.instanceName||"No definido","Nivel":item.level||"Sin nivel","Sistema":item.group||"No identificado","Código":item.tag||"Sin código"};
+  for(const [k,v] of Object.entries(props))box.append(h("div",{class:"info-row"},[h("small",{text:k}),h("strong",{text:safeText(v)})]));
+  const nearby=state.model?.getNearby(item)||[];
+  box.append(h("div",{class:"section-label",text:"INSTALACIÓN"}));
+  box.append(h("div",{class:"floor-list"},[
+    h("button",{class:"pill",text:"Resaltar cercanos",onClick:()=>{
+      if(item.level&&item.level!=="Sin nivel"){state.floor=item.level;state.model?.setLevel(item.level)}
+      state.systems=[...new Set([...state.systems,item.group,...nearby.map(e=>e.group)])];
+      state.model?.setSystems(state.systems);state.model?.focusNearby(item);renderFilterPanel();
+    }}),
+    h("button",{class:"pill",text:"Ver todo",onClick:()=>{
+      state.model?.clearNearby();state.floor="Todos";state.model?.setLevel("Todos");
+      state.systems=[...(state.project?._systems||[])];state.model?.setSystems(state.systems);
+      state.categories=categoryOptions.map(c=>c.id);state.model?.setCategories(state.categories);renderFilterPanel();
+    }}),
+    h("button",{class:"pill",text:"Planta",onClick:()=>{state.view="plan";state.model?.setView("plan");refreshToolbar()}})
+  ]));
+  if(nearby.length){
+    box.append(h("div",{class:"section-label",text:"ELEMENTOS PRÓXIMOS"}));
+    for(const e of nearby.slice(0,6))box.append(h("div",{class:"info-row"},[h("small",{text:e.group+" · "+e.level}),h("strong",{text:e.name})]));
   }
   panel.append(box);
 }
