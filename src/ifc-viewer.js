@@ -73,7 +73,8 @@ export async function loadIFC(host,file,{status=()=>{},onSelect=()=>{},onModel=(
    mesh.applyMatrix4(new THREE.Matrix4().fromArray(Array.from(placed.flatTransformation)));
    mesh.userData.entry=entry;root.add(mesh);objects.push(mesh);entry.objects.push(mesh);
    // Cache element bounds once. Proximity checks never imply a verified MEP connection.
-   const bounds=new THREE.Box3().setFromObject(mesh);
+   geo.computeBoundingBox();
+   const bounds=geo.boundingBox.clone().applyMatrix4(mesh.matrix);
    if(entry.bounds)entry.bounds.union(bounds);else entry.bounds=bounds;
    geometry.delete?.();
   }
