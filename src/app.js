@@ -68,7 +68,7 @@ function sidebar(){
 function topbar(){
   return h("div",{class:"topbar"},[
     h("div",{class:"breadcrumbs"},[
-      h("button",{class:"btn btn-ghost btn-small mobile-toggle",text:"☰",onClick:()=>toast("Usá «Obras» para volver al inicio.")}),
+      h("button",{class:"btn btn-ghost btn-small mobile-toggle",text:"← Obras",onClick:()=>goHome()}),
       h("span",{text:"IMPIANTI"}),
       h("span",{text:"/"}),
       h("strong",{text:state.project?state.project.name:"Obras"})
@@ -106,16 +106,24 @@ function homePage(){
     h("button",{class:"btn btn-white",text:"Explorar demo "+icon("arrow"),onClick:()=>openProject(demo)})
   ]);
   wrapper.append(overview);
+  const searchInput=h("input",{class:"search",type:"search",placeholder:"Buscar obra…","aria-label":"Buscar obras",value:state.query});
+  searchInput.addEventListener("input",e=>{
+    state.query=e.target.value;
+    const cards=$(".grid-cards");
+    if(cards)for(const card of cards.children){
+      const matches=(card.dataset.search||"").includes(state.query.toLowerCase());
+      card.style.display=matches?"":"none";
+    }
+  });
   wrapper.append(h("div",{class:"page-header"},[
-    h("div",{},[h("h2",{text:"Mis obras"}),h("p",{text:"Obras guardadas en este navegador"})]),
-    h("input",{class:"search",type:"search",placeholder:"Buscar obra…","aria-label":"Buscar obras",value:state.query,onInput:e=>{state.query=e.target.value;render()}})
+    h("div",{},[h("h2",{text:"Mis obras"}),h("p",{text:"Obras guardadas en este navegador"})]),searchInput
   ]));
   const cards=h("div",{class:"grid-cards"});
   const items=[demo,...state.projects].filter(p=>(p.name+" "+p.location).toLowerCase().includes(state.query.toLowerCase()));
   for(const p of items){
     const img=h("div",{class:"project-visual"},[projectIllustration()]);
     img.append(h("span",{class:"tag "+(p.id==="demo"?"badge-demo":""),style:"position:absolute;top:12px;left:12px",text:p.id==="demo"?"EJEMPLO":"IFC LOCAL"}));
-    cards.append(h("article",{class:"card project-card",role:"button",tabindex:"0",onClick:()=>openProject(p),onKeydown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProject(p)}}},[
+    cards.append(h("article",{class:"card project-card","data-search":(p.name+" "+p.location).toLowerCase(),role:"button",tabindex:"0",onClick:()=>openProject(p),onKeydown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openProject(p)}}},[
       img,h("div",{class:"project-name",text:p.name}),h("div",{class:"project-meta",text:p.location||"Ubicación sin definir"}),
       h("div",{class:"project-foot"},[h("span",{text:p.id==="demo"?"Exploración ilustrativa":"Modelo IFC guardado"}),h("span",{text:"Abrir "+icon("arrow")})])
     ]))
