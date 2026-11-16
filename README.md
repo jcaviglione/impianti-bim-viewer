@@ -2,13 +2,12 @@
 
 Interfaz ligera para que mantenimiento consulte obras por nivel, instalación y equipo, con una vista axonométrica fácil de usar.
 
-## Estado: Estado de validación
+## Estado: Primera versión para prueba con IFC real
 
 - Inicio con listado de obras, búsqueda y creación de una obra.
 - Carga de IFC local desde el navegador; visualización tridimensional por Web-IFC + Three.js (dependencias bajo demanda).
 - Filtros por niveles, instalaciones, colores editables, cámara axonométrica/planta/orbitar, selección de elementos y panel de información.
 - Catálogo inicial de equipos por clase IFC y nivel, más búsqueda visual de elementos MEP **cercanos** a un equipo. El visor no presupone conectores ni conexiones hidráulicas; usa geometría y proximidad. La asociación es orientativa, no una certificación de conexión.
-- Ejemplo ilustrativo incluido para probar la interfaz sin un IFC.
 - Obras y archivos IFC guardados **solo en IndexedDB del navegador que los cargó**. No existe todavía un backend ni publicación compartida entre dispositivos.
 - Enlace a obra/equipo y QR real: **pendiente**, no afirmar que ya funciona.
 
@@ -28,11 +27,11 @@ Alternativa: publicar este repositorio como sitio estático (GitHub Pages/Vercel
 
 ## Cómo probar
 
-1. Abrir «Explorar demo» para verificar niveles, sistemas, ficha de equipo y vistas.
-2. «Nueva obra» → nombre, ubicación y archivo .ifc → «Crear y abrir».
-3. Esperar el análisis IFC; los archivos grandes pueden necesitar bastante memoria o demorar.
-4. Seleccionar SS1, SS2, PB u otro nivel exportado. Activar/desactivar instalaciones, seleccionar un elemento y orbitar con el botón.
-5. Verificar en el IFC real la clasificación de sistemas: depende de cómo Revit exportó tipos, relaciones y nombres. Si faltan datos, no se inventan.
+1. «Nueva obra» → nombre, ubicación y archivo .ifc → «Crear y abrir».
+2. Esperar a que cargue el modelo IFC; los archivos grandes pueden necesitar bastante memoria.
+3. Seleccionar un nivel y mostrar u ocultar equipos, cañerías, conductos y accesorios con las casillas.
+4. Seleccionar un equipo para ver su tipo y las instalaciones cercanas.
+5. Comprobar que el IFC conserva las categorías, niveles y nombres de tipo que se cargaron desde Revit.
 
 ## Controles de visibilidad
 
