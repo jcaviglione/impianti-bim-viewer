@@ -7,6 +7,7 @@ Interfaz ligera para que mantenimiento consulte obras por nivel, instalación y 
 - Inicio con listado de obras, búsqueda y creación de una obra.
 - Carga de IFC local desde el navegador; visualización tridimensional por Web-IFC + Three.js (dependencias bajo demanda).
 - Filtros por niveles, instalaciones, colores editables, cámara axonométrica/planta/orbitar, selección de elementos y panel de información.
+- Catálogo inicial de equipos por clase IFC y nivel, más búsqueda visual de elementos MEP **cercanos** a un equipo. El visor no presupone conectores ni conexiones hidráulicas; usa geometría y proximidad. La asociación es orientativa, no una certificación de conexión.
 - Ejemplo ilustrativo incluido para probar la interfaz sin un IFC.
 - Obras y archivos IFC guardados **solo en IndexedDB del navegador que los cargó**. No existe todavía un backend ni publicación compartida entre dispositivos.
 - Enlace a obra/equipo y QR real: **pendiente**, no afirmar que ya funciona.
