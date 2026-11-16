@@ -43,7 +43,7 @@ async function allProjects(){try{const d=await db();return await new Promise((re
 async function saveProject(project){const d=await db();await new Promise((resolve,reject)=>{const t=d.transaction("projects","readwrite");t.objectStore("projects").put(project);t.oncomplete=resolve;t.onerror=()=>reject(t.error)})}
 function safeText(s){return String(s??"")}
 function brand(){return h("div",{class:"brand-wrap"},[
-  h("div",{class:"brand"},[h("span",{text:"IMP"}),h("span",{class:"brand-mark",text:"III"}),h("span",{text:"ANTI"})]),
+  h("div",{class:"brand"},[h("span",{class:"brand-mark",text:"I"}),h("span",{text:"MP"}),h("span",{class:"brand-mark",text:"I"}),h("span",{text:"ANT"}),h("span",{class:"brand-mark",text:"I"})]),
   h("div",{class:"brand-sub",text:"VISOR DE INSTALACIONES"})
 ])}
 function sidebar(){
