@@ -136,11 +136,17 @@ function projectDialog(){
   form.addEventListener("submit",async e=>{
     e.preventDefault();const f=file.files?.[0];
     if(!f||!f.name.toLowerCase().endsWith(".ifc")){toast("Seleccioná un archivo con extensión .ifc");return}
-    submit.disabled=true;submit.textContent="Guardando…";
-    try{
-      const project={id:"obra-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),name:name.value.trim(),location:location.value.trim(),created:new Date().toISOString(),file:f};
-      await saveProject(project);state.projects=await allProjects();state.openDialog=false;openProject(project)
-    }catch(err){console.error(err);toast("No fue posible guardar el IFC. Podría superar el espacio disponible en este navegador.");submit.disabled=false;submit.textContent="Crear y abrir obra"}
+    submit.disabled=true;submit.textContent="Abriendo…";
+    const project={id:"obra-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),name:name.value.trim(),location:location.value.trim(),created:new Date().toISOString(),file:f};
+    // IFCs exceeding the storage budget may still be opened in this session.
+    const maxStoredBytes=120*1024*1024;
+    let stored=false;
+    if(f.size<=maxStoredBytes){
+      try{await saveProject(project);stored=true;state.projects=await allProjects()}
+      catch(err){console.warn("Almacenamiento local no disponible",err)}
+    }
+    state.openDialog=false;openProject(project);
+    if(!stored)toast("Archivo grande: se abre solo en esta sesión. Para verlo después deberás seleccionarlo de nuevo.");
   });
   card.append(form);shade.append(card);shade.addEventListener("click",e=>{if(e.target===shade){state.openDialog=false;render()}});return shade;
 }
