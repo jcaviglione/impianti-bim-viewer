@@ -26,7 +26,16 @@ const demo={
     {id:"HI-01",name:"Hidrante HI-01",floor:"PB",system:"Incendio",kind:"Accesorio",details:{"Código":"HI-01","Categoría":"Protección contra incendios","Ubicación":"Planta baja"}}
   ]
 };
-const state={page:"home",project:null,projects:[],floor:"Todos",systems:[],colors:{...colorDefaults},view:"axo",selected:null,model:null,file:null,query:"",openDialog:false};
+const categoryOptions=[
+  {id:"architecture",label:"Arquitectura",hint:"Muros, losas y puertas"},
+  {id:"equipment",label:"Equipos",hint:"Chillers, bombas, UTAs"},
+  {id:"pipes",label:"Cañerías",hint:"Tuberías"},
+  {id:"pipefit",label:"Accesorios de cañerías",hint:"Válvulas, codos y tees"},
+  {id:"ducts",label:"Conductos",hint:"Conductos rígidos"},
+  {id:"flexduct",label:"Conductos flexibles",hint:"Flex ducts"},
+  {id:"terminals",label:"Terminales",hint:"Difusores y rejillas"}
+];
+const state={page:"home",project:null,projects:[],floor:"Todos",systems:[],categories:categoryOptions.map(c=>c.id),colors:{...colorDefaults},view:"axo",selected:null,model:null,file:null,query:"",openDialog:false};
 let dbPromise=null,toastTimer=null,openSeq=0;
 const icon=(name)=>({building:"▦",layers:"▤",equipment:"◈",menu:"☰",search:"⌕",back:"←",plus:"+",view:"◇",close:"×",location:"⌖",file:"▣",settings:"⚙",information:"ⓘ",arrow:"→",tick:"✓"}[name]||"•");
 function toast(message){const target=$("#toast");target.textContent=message;target.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>target.classList.remove("show"),4100)}
@@ -151,7 +160,7 @@ function projectDialog(){
 function disposeModel(){openSeq++;if(state.model){state.model.dispose();state.model=null}}
 function openProject(p){
   disposeModel();state.project=p;state.page="viewer";state.floor="Todos";state.selected=null;state.view="axo";
-  state.systems=[...(p.id==="demo"?p.systems:[])];render();
+  state.systems=[...(p.id==="demo"?p.systems:[])];state.categories=categoryOptions.map(c=>c.id);render();
   if(p.id!=="demo")setTimeout(()=>mountModel(p),0);
 }
 async function mountModel(project){
@@ -165,7 +174,7 @@ async function mountModel(project){
       onModel:metadata=>{if(seq!==openSeq)return;state.project._levels=metadata.levels;state.project._systems=metadata.systems;state.project._equipment=metadata.equipment||[]}
     });
     if(seq!==openSeq){controller.dispose();return}
-    state.model=controller;state.systems=[...controller.systems];state.floor="Todos";loading.remove();
+    state.model=controller;state.systems=[...controller.systems];state.floor="Todos";controller.setCategories(state.categories);loading.remove();
     renderFilterPanel();renderInspector();refreshToolbar();
     toast("Modelo IFC cargado · "+controller.count+" elementos.");
   }catch(e){console.error(e);loading.replaceChildren(h("div",{style:"max-width:300px;line-height:1.6",text:"No se pudo visualizar este IFC. Probá exportar IFC4 Reference View desde Revit o usar un archivo pequeño. Detalle: "+e.message}))}
@@ -196,7 +205,35 @@ function renderFilterPanel(){
   content.append(h("div",{class:"section-label",text:"01 · Elegí un nivel"}));
   const floorlist=h("div",{class:"floor-list"});
   for(const floor of levels())floorlist.append(h("button",{class:"pill "+(state.floor===floor?"active":""),text:floor,onClick:()=>{state.floor=floor;state.selected=null;if(state.model)state.model.setLevel(floor);renderFilterPanel();renderInspector();updateDemoScene()}}));
-  content.append(floorlist,h("div",{class:"section-label",text:"02 · Instalaciones visibles"}));
+  content.append(floorlist,h("div",{class:"section-label",text:"02 · Mostrar / ocultar elementos"}));
+  const categoryActions=h("div",{class:"floor-list",style:"margin-bottom:12px"});
+  const presets=[
+    ["Solo equipos",["equipment"]],
+    ["Cañerías + equipos",["pipes","pipefit","equipment"]],
+    ["Ver todo",categoryOptions.map(c=>c.id)]
+  ];
+  for(const [caption,ids] of presets)categoryActions.append(
+    h("button",{class:"pill",text:caption,onClick:()=>{
+      state.categories=[...ids];state.model?.setCategories(state.categories);
+      renderFilterPanel();updateDemoScene();
+    }})
+  );
+  content.append(categoryActions);
+  for(const category of categoryOptions){
+    const row=h("div",{class:"system-item",style:"padding:7px 0"});
+    const box=h("input",{type:"checkbox","aria-label":"Mostrar "+category.label});
+    box.checked=state.categories.includes(category.id);
+    box.addEventListener("change",()=>{
+      state.categories=box.checked?[...state.categories,category.id]:state.categories.filter(id=>id!==category.id);
+      state.model?.setCategories(state.categories);updateDemoScene();
+    });
+    const label=h("label",{style:"display:flex;flex-direction:column;gap:2px"});
+    label.append(h("span",{text:category.label}),h("small",{style:"color:#929292;font-size:10px;font-weight:400",text:category.hint}));
+    label.addEventListener("click",()=>box.click());
+    row.append(box,label);
+    content.append(row);
+  }
+  content.append(h("div",{class:"section-label",text:"03 · Filtrar por sistema"}));
   const available=state.project?.id==="demo"?demo.systems:state.project?._systems||[];
   if(!available.length)content.append(h("p",{class:"project-meta",text:"Los sistemas aparecerán al procesar el IFC."}));
   for(const system of available){
@@ -211,7 +248,7 @@ function renderFilterPanel(){
     btn.addEventListener("click",()=>picker.click());swatch.append(btn,picker);
     row.append(checked,title,swatch);content.append(row);
   }
-  content.append(h("div",{class:"section-label",text:"03 · Buscar equipo"}));
+  content.append(h("div",{class:"section-label",text:"04 · Buscar equipo"}));
   const search=h("input",{class:"search",style:"width:100%",type:"search",placeholder:"Nombre o código…","aria-label":"Buscar equipo"});
   const results=h("div",{id:"equipmentResults",style:"margin-top:10px"});
   const drawResults=()=>{
@@ -219,11 +256,11 @@ function renderFilterPanel(){
     if(state.project?.id!=="demo"){
       const items=(state.project?._equipment||[]).filter(e=>
         (state.floor==="Todos"||e.level===state.floor)&&
-        (e.name+" "+e.type+" "+e.tag).toLowerCase().includes(q)
+        (e.name+" "+(e.typeName||"")+" "+(e.instanceName||"")+" "+e.type+" "+e.tag).toLowerCase().includes(q)
       ).slice(0,45);
       for(const e of items)results.append(h("button",{
         class:"nav-item",style:"width:100%;font-size:12px;justify-content:start",
-        text:"◈ "+(e.name||e.type),
+        text:"◈ "+(e.typeName||e.name||e.type),
         onClick:()=>{state.model?.clearNearby();state.selected=e;renderInspector()}
       }));
       if(!items.length)results.append(h("p",{class:"project-meta",text:"No se encontraron equipos en este nivel. También podés tocar cualquier elemento del modelo."}));
@@ -262,7 +299,6 @@ function createDemoSVG(){
   const valid=(system,level)=>state.systems.includes(system)&&(state.floor==="Todos"||state.floor===level);
   const axo=state.view!=="plan";
   if(axo){
-    const architecture=h("div");
     svg.innerHTML='<g stroke="#b5bfc0" fill="none" stroke-width="1.35" opacity=".62"><path d="M118 140L322 50L537 142L326 237Z M118 140V285L326 382V237 M326 382L537 286V142 M118 189L326 281L537 190 M118 236L326 327L537 239 M159 123V303 M213 102V327 M268 78V355 M376 77V356 M436 102V333 M493 123V306"/><path d="M149 127L357 222M204 103L415 198M254 81L469 175" opacity=".4"/></g>';
     const paths=[
       {system:"Agua fría",level:"SS1",d:"M165 225L320 288L455 222L506 245",width:8},
@@ -310,9 +346,9 @@ function renderInspector(){
   }
   const item=state.selected,box=h("div",{class:"panel-pad"});
   box.append(h("div",{class:"eyebrow",text:"FICHA DE ELEMENTO"}));
-  box.append(h("h2",{text:item.name||"Elemento BIM"}));
+  box.append(h("h2",{text:item.typeName||item.name||"Elemento BIM"}));
   box.append(h("span",{class:"tag",text:item.system||item.group||item.type||"Elemento"}));
-  const properties=item.details||{"ID IFC":item.id,"Global ID":item.guid||"No disponible","Tipo":item.type||"Sin identificar","Nivel":item.level||"Sin nivel","Categoría / sistema":item.group||"No identificado","Etiqueta":item.tag||"No definida"};
+  const properties=item.details||{"Nombre de tipo (Revit)":item.typeName||"No exportado","Nombre de instancia":item.instanceName||"No exportado","ID IFC":item.id,"Global ID":item.guid||"No disponible","Categoría IFC":item.type||"Sin identificar","Nivel":item.level||"Sin nivel","Sistema estimado":item.group||"No identificado","Etiqueta":item.tag||"No definida"};
   for(const [key,value] of Object.entries(properties))box.append(h("div",{class:"info-row"},[h("small",{text:key}),h("strong",{text:safeText(value)})]));
   if(state.project.id==="demo"){
     box.append(h("div",{class:"section-label",text:"Visualizar instalación"}));
